@@ -1,19 +1,23 @@
 # Personal Portfolio Website
 
-A modern, responsive personal portfolio website built with HTML, CSS, and JavaScript.
+A modern, responsive multi-page portfolio website built with HTML, CSS, and JavaScript.
 
 ## Features
 
+- **Multi-Page Design**: Separate pages for easy navigation
+  - **Homepage**: Profile picture, name, about preview, and clickable section cards
+  - **About Page**: Detailed biography, experience timeline, and stats
+  - **Skills Page**: Technology showcase with proficiency levels
+  - **Projects Page**: Filterable project gallery
+  - **Contact Page**: Contact form and social links
 - **Responsive Design**: Fully responsive layout that works on all devices
-- **Modern UI**: Clean and professional design with smooth animations
-- **Interactive Navigation**: Sticky navbar with smooth scrolling
-- **Multiple Sections**:
-  - Hero section with call-to-action buttons
-  - About section with stats
-  - Skills showcase
-  - Featured projects gallery
-  - Contact form with social links
-- **Smooth Animations**: Scroll-triggered animations and transitions
+- **Modern UI**: Clean design with purple gradient theme and smooth animations
+- **Interactive Elements**:
+  - Sticky navbar with page-specific active states
+  - Clickable preview cards that redirect to dedicated pages
+  - Project filtering system
+  - Scroll-triggered animations
+  - Animated proficiency bars
 - **Mobile-Friendly**: Hamburger menu for mobile devices
 
 ## Technologies Used
@@ -25,12 +29,7 @@ A modern, responsive personal portfolio website built with HTML, CSS, and JavaSc
 
 ## Getting Started
 
-### Prerequisites
-
-- A modern web browser
-- A local web server (optional, for development)
-
-### Installation
+### Local Development
 
 1. Clone this repository:
 ```bash
@@ -45,6 +44,54 @@ npx serve
 ```
 
 3. Visit `http://localhost:8000` in your browser
+
+## Deployment
+
+This portfolio can be deployed to various hosting platforms:
+
+### Option 1: Netlify (Recommended)
+
+1. Push your code to GitHub
+2. Go to [Netlify](https://www.netlify.com)
+3. Click "Add new site" → "Import an existing project"
+4. Connect your GitHub repository
+5. Click "Deploy site"
+
+**Or use Netlify CLI:**
+```bash
+npm install -g netlify-cli
+netlify deploy --prod
+```
+
+### Option 2: Vercel
+
+1. Push your code to GitHub
+2. Go to [Vercel](https://vercel.com)
+3. Click "New Project"
+4. Import your GitHub repository
+5. Click "Deploy"
+
+**Or use Vercel CLI:**
+```bash
+npm install -g vercel
+vercel --prod
+```
+
+### Option 3: GitHub Pages
+
+1. Push your code to GitHub
+2. Go to repository Settings → Pages
+3. Select the branch you want to deploy
+4. Click "Save"
+5. Your site will be available at `https://yourusername.github.io/repository-name`
+
+### Option 4: Simple Static Hosting
+
+Upload all files to any static web hosting service:
+- AWS S3 + CloudFront
+- Firebase Hosting
+- Cloudflare Pages
+- Render
 
 ## Customization
 
