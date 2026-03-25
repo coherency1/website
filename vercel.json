@@ -1,4 +1,11 @@
 {
+  "redirects": [
+    {
+      "source": "/baseball",
+      "destination": "/baseball/",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/baseball/statpad/:path*",
@@ -19,10 +26,6 @@
     {
       "source": "/baseball/:path*",
       "destination": "/pages/baseball/:path*"
-    },
-    {
-      "source": "/baseball",
-      "destination": "/pages/baseball/index.html"
     }
   ]
 }
