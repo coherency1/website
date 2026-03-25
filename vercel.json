@@ -24,6 +24,10 @@
       "destination": "https://coherency1.github.io/deadeye/"
     },
     {
+      "source": "/baseball/",
+      "destination": "/pages/baseball/index.html"
+    },
+    {
       "source": "/baseball/:path*",
       "destination": "/pages/baseball/:path*"
     }
