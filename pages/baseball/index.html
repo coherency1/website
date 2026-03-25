@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Coherency Baseball Hub — games, tools, and live Dodgers scoreboard.">
+    <title>Baseball Hub — Coherency</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Scanline overlay -->
+    <div class="scanlines" aria-hidden="true"></div>
+
+    <!-- Nav -->
+    <nav class="nav" id="nav">
+        <a href="/" class="nav-logo">coherency</a>
+        <div class="nav-links">
+            <a href="https://github.com/coherency1" target="_blank" rel="noopener">github</a>
+        </div>
+    </nav>
+
+    <main class="hub">
+
+        <!-- ═══ VIDEO BOARD ═══ -->
+        <div class="video-board">
+
+            <!-- Board header — clock -->
+            <div class="board-header">
+                <div class="board-header-accent"></div>
+                <span class="board-clock" id="boardClock"></span>
+                <div class="board-header-accent"></div>
+            </div>
+
+            <!-- Board main — 3-column layout -->
+            <div class="board-main">
+
+                <!-- Left lineup: GAMES -->
+                <div class="lineup-panel" id="gamesPanel" tabindex="0">
+                    <div class="panel-header">
+                        <span class="panel-team-name">GAMES</span>
+                    </div>
+                    <button class="scroll-arrow arrow-up hidden" id="gamesArrowUp" aria-label="Scroll up">▲</button>
+                    <div class="panel-viewport">
+                        <div class="panel-lineup" id="gamesLineup">
+                            <!-- populated by script -->
+                        </div>
+                    </div>
+                    <button class="scroll-arrow arrow-down hidden" id="gamesArrowDown" aria-label="Scroll down">▼</button>
+                </div>
+
+                <!-- Center screen -->
+                <div class="center-screen" id="centerScreen">
+                    <!-- Default content -->
+                    <div class="center-default" id="centerDefault">
+                        <div class="center-batter-name">BASEBALL HUB</div>
+                        <div class="center-section-label">SEASON 2026</div>
+                        <div class="center-stats-grid">
+                            <div class="center-stat">
+                                <span class="center-stat-label">GAMES</span>
+                                <span class="center-stat-value" id="statGames">0</span>
+                            </div>
+                            <div class="center-stat">
+                                <span class="center-stat-label">APPS</span>
+                                <span class="center-stat-value" id="statApps">0</span>
+                            </div>
+                            <div class="center-stat">
+                                <span class="center-stat-label">LIVE</span>
+                                <span class="center-stat-value" id="statLive">0</span>
+                            </div>
+                            <div class="center-stat">
+                                <span class="center-stat-label">SOON</span>
+                                <span class="center-stat-value" id="statSoon">0</span>
+                            </div>
+                        </div>
+                        <div class="center-desc">
+                            Select a player from the lineup<br>to view their scouting report.
+                        </div>
+                    </div>
+
+                    <!-- Info card (shown on selection) -->
+                    <div class="center-info-card" id="centerInfoCard" style="display:none;">
+                        <div class="info-card-header">
+                            <span class="info-card-num" id="infoNum"></span>
+                            <div class="info-card-name-block">
+                                <span class="info-card-name" id="infoName"></span>
+                                <span class="info-card-sub" id="infoSub"></span>
+                            </div>
+                        </div>
+                        <div class="info-card-section-label">SCOUTING REPORT</div>
+                        <div class="info-card-stats" id="infoStats"></div>
+                        <div class="info-card-section-label">ABOUT</div>
+                        <div class="info-card-desc" id="infoDesc"></div>
+                        <a class="info-card-link" id="infoLink" href="#">PLAY ▸</a>
+                    </div>
+
+                    <!-- Game State panel (shown on scoreboard click) -->
+                    <div class="center-game-state" id="centerGameState" style="display:none;">
+                        <div class="gs-scroll" id="gsBody"></div>
+                    </div>
+                </div>
+
+                <!-- Right lineup: APPS -->
+                <div class="lineup-panel" id="appsPanel" tabindex="0">
+                    <div class="panel-header">
+                        <span class="panel-team-name">APPS</span>
+                    </div>
+                    <button class="scroll-arrow arrow-up hidden" id="appsArrowUp" aria-label="Scroll up">▲</button>
+                    <div class="panel-viewport">
+                        <div class="panel-lineup" id="appsLineup">
+                            <!-- populated by script -->
+                        </div>
+                    </div>
+                    <button class="scroll-arrow arrow-down hidden" id="appsArrowDown" aria-label="Scroll down">▼</button>
+                </div>
+
+            </div>
+
+            <!-- Board bottom bar — COHERENCY -->
+            <div class="board-bottom-bar">
+                <a href="../v2/index.html" class="bottom-bar-link">COHERENCY</a>
+            </div>
+        </div>
+
+        <!-- ═══ LIVE SCOREBOARD ═══ -->
+        <div class="live-scoreboard" id="liveScoreboard">
+
+            <!-- Top info bar -->
+            <div class="score-info-bar">
+                <div class="score-info-left">
+                    <span class="batter-label">AB</span>
+                    <span class="batter-info" id="batterInfo">---</span>
+                </div>
+                <div class="score-info-center">
+                    <span class="pitcher-label">P</span>
+                    <span class="pitcher-info" id="pitcherInfo">---</span>
+                </div>
+                <div class="score-info-right">
+                    <span class="game-status" id="gameStatus">LOADING</span>
+                    <span class="game-info" id="gameInfo"></span>
+                </div>
+            </div>
+
+            <!-- Main score strip -->
+            <div class="score-strip">
+                <!-- Team badges -->
+                <div class="score-teams">
+                    <div class="team-badge away-badge">
+                        <span class="badge-abbr" id="awayName">AWAY</span>
+                    </div>
+                    <div class="team-badge home-badge">
+                        <span class="badge-abbr" id="homeName">LAD</span>
+                    </div>
+                </div>
+
+                <!-- Inning indicator -->
+                <div class="inning-indicator">
+                    <span class="inning-half" id="inningHalf"></span>
+                    <span class="inning-num" id="inningNum"></span>
+                </div>
+
+                <!-- Innings table -->
+                <div class="score-table-wrap">
+                    <table class="score-table" id="scoreTable">
+                        <thead>
+                            <tr>
+                                <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+                                <th>6</th><th>7</th><th>8</th><th>9</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="awayRow">
+                                <td id="inn-away-1"></td><td id="inn-away-2"></td><td id="inn-away-3"></td>
+                                <td id="inn-away-4"></td><td id="inn-away-5"></td><td id="inn-away-6"></td>
+                                <td id="inn-away-7"></td><td id="inn-away-8"></td><td id="inn-away-9"></td>
+                            </tr>
+                            <tr id="homeRow">
+                                <td id="inn-home-1"></td><td id="inn-home-2"></td><td id="inn-home-3"></td>
+                                <td id="inn-home-4"></td><td id="inn-home-5"></td><td id="inn-home-6"></td>
+                                <td id="inn-home-7"></td><td id="inn-home-8"></td><td id="inn-home-9"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- R H E -->
+                <div class="score-rhe">
+                    <div class="rhe-col">
+                        <span class="rhe-label">R</span>
+                        <span class="rhe-val" id="away-r">0</span>
+                        <span class="rhe-val" id="home-r">0</span>
+                    </div>
+                    <div class="rhe-col">
+                        <span class="rhe-label">H</span>
+                        <span class="rhe-val" id="away-h">0</span>
+                        <span class="rhe-val" id="home-h">0</span>
+                    </div>
+                    <div class="rhe-col">
+                        <span class="rhe-label">E</span>
+                        <span class="rhe-val" id="away-e">0</span>
+                        <span class="rhe-val" id="home-e">0</span>
+                    </div>
+                </div>
+
+                <!-- B / S / O -->
+                <div class="score-count">
+                    <div class="count-header">
+                        <span>BALLS</span>
+                        <span>STRIKES</span>
+                        <span>OUTS</span>
+                    </div>
+                    <div class="count-numbers">
+                        <span class="count-big balls" id="ballCount">0</span>
+                        <span class="count-big strikes" id="strikeCount">0</span>
+                        <span class="count-big outs" id="outCount">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
