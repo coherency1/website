@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Coherency — Shohei Ohtani stats.">
+    <title>Shohei Ohtani — Coherency Baseball</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+    <div class="scanlines" aria-hidden="true"></div>
+    <canvas id="starsCanvas" class="stars-canvas" aria-hidden="true"></canvas>
+
+    <nav class="nav" id="nav">
+        <a href="../../../index.html" class="nav-logo">coherency</a>
+        <div class="nav-links">
+            <a href="../index.html">scoreboard</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="player-card">
+            <div class="card-header">
+                <span class="card-number">17</span>
+                <div class="card-name-block">
+                    <span class="card-player-name">SHOHEI OHTANI</span>
+                    <span class="card-position">DH / SP — TWO-WAY</span>
+                </div>
+            </div>
+
+            <div class="card-section-label">BATTING</div>
+            <div class="card-stats">
+                <div class="stat-cell">
+                    <span class="stat-label">AVG</span>
+                    <span class="stat-value">.305</span>
+                </div>
+                <div class="stat-cell">
+                    <span class="stat-label">OBP</span>
+                    <span class="stat-value">.390</span>
+                </div>
+                <div class="stat-cell">
+                    <span class="stat-label">SLG</span>
+                    <span class="stat-value">.646</span>
+                </div>
+                <div class="stat-cell">
+                    <span class="stat-label">OPS</span>
+                    <span class="stat-value">1.036</span>
+                </div>
+            </div>
+
+            <div class="card-section-label">PITCHING</div>
+            <div class="card-stats">
+                <div class="stat-cell">
+                    <span class="stat-label">ERA</span>
+                    <span class="stat-value">3.01</span>
+                </div>
+                <div class="stat-cell">
+                    <span class="stat-label">WHIP</span>
+                    <span class="stat-value">1.04</span>
+                </div>
+                <div class="stat-cell">
+                    <span class="stat-label">K/9</span>
+                    <span class="stat-value">11.4</span>
+                </div>
+                <div class="stat-cell">
+                    <span class="stat-label">IP</span>
+                    <span class="stat-value">132</span>
+                </div>
+            </div>
+
+            <div class="card-details">
+                BATS: L / THROWS: R<br>
+                HT: 6'4" / WT: 210 lbs<br>
+                AGE: 31
+            </div>
+
+            <a href="../index.html" class="card-back-link">← BACK TO SCOREBOARD</a>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <span class="footer-copy">&copy; 2026 Corey Chen</span>
+        <div class="footer-links">
+            <a href="../index.html">Scoreboard</a>
+        </div>
+    </footer>
+
+    <script>
+    (function() {
+        const canvas = document.getElementById('starsCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        for (let i = 0; i < 80; i++) {
+            const brightness = 0.2 + Math.random() * 0.5;
+            ctx.fillStyle = `rgba(200, 210, 230, ${brightness})`;
+            ctx.fillRect(Math.floor(Math.random() * w), Math.floor(Math.random() * h), Math.random() < 0.3 ? 2 : 1, Math.random() < 0.3 ? 2 : 1);
+        }
+        const nav = document.getElementById('nav');
+        if (nav) window.addEventListener('scroll', () => { nav.classList.toggle('scrolled', window.scrollY > 40); }, { passive: true });
+    })();
+    </script>
+</body>
+</html>
