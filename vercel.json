@@ -12,12 +12,20 @@
       "destination": "https://coherency1.github.io/baseball-games/statpad/:path*"
     },
     {
+      "source": "/baseball/statpad/",
+      "destination": "https://coherency1.github.io/baseball-games/statpad/"
+    },
+    {
       "source": "/baseball/statpad",
       "destination": "https://coherency1.github.io/baseball-games/statpad/"
     },
     {
       "source": "/baseball/deadeye/:path*",
       "destination": "https://coherency1.github.io/baseball-games/deadeye/:path*"
+    },
+    {
+      "source": "/baseball/deadeye/",
+      "destination": "https://coherency1.github.io/baseball-games/deadeye/"
     },
     {
       "source": "/baseball/deadeye",
