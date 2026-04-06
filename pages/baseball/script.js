@@ -154,6 +154,9 @@ const VISIBLE_ROWS = 9;
 
     // ── Selection handler ──
     function selectItem(item, row) {
+        // Close game state panel silently if open — it will handle its own display restoration
+        if (typeof GAME.hideGS === 'function') GAME.hideGS();
+
         // Toggle off
         if (selectedRow === row) {
             selectedRow.classList.remove('selected');
@@ -539,6 +542,7 @@ const VISIBLE_ROWS = 9;
     const $gs = document.getElementById('centerGameState');
     const $gsBody = document.getElementById('gsBody');
     let isOpen = false;
+    let prevPanel = 'default'; // 'default' | 'infocard'
 
     function abbr(name) {
         if (!name) return '---';
@@ -560,6 +564,7 @@ const VISIBLE_ROWS = 9;
     function show() {
         if (!GAME.feed) return;
         isOpen = true;
+        prevPanel = $centerInfoCard.style.display !== 'none' ? 'infocard' : 'default';
         $centerDefault.style.display = 'none';
         $centerInfoCard.style.display = 'none';
         $gs.style.display = '';
@@ -569,8 +574,21 @@ const VISIBLE_ROWS = 9;
     function hide() {
         isOpen = false;
         $gs.style.display = 'none';
-        $centerDefault.style.display = '';
+        if (prevPanel === 'infocard') {
+            $centerInfoCard.style.display = '';
+            $centerDefault.style.display = 'none';
+        } else {
+            $centerDefault.style.display = '';
+            $centerInfoCard.style.display = 'none';
+        }
     }
+
+    // Silently close GS without restoring — used when selectItem fires while GS is open
+    GAME.hideGS = function() {
+        if (!isOpen) return;
+        isOpen = false;
+        $gs.style.display = 'none';
+    };
 
     $scoreboard.addEventListener('click', (e) => {
         if (e.target.closest('a')) return;
