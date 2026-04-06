@@ -32,6 +32,14 @@
       "destination": "https://coherency1.github.io/baseball-games/deadeye/"
     },
     {
+      "source": "/baseball/fantasy",
+      "destination": "/pages/baseball/fantasy/index.html"
+    },
+    {
+      "source": "/baseball/fantasy/",
+      "destination": "/pages/baseball/fantasy/index.html"
+    },
+    {
       "source": "/baseball/",
       "destination": "/pages/baseball/index.html"
     },
