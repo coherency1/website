@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy — Coherency Baseball</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">coherency</a>
+    <div class="nav-links">
+      <a href="/baseball/" class="nav-link">baseball</a>
+    </div>
+  </nav>
+
+  <main class="fantasy-dashboard">
+
+    <!-- HEADER -->
+    <header class="dash-header">
+      <div class="dash-title">
+        <span class="dash-label">FANTASY</span>
+        <span class="dash-date" id="dashDate"></span>
+      </div>
+      <div class="scoring-toggle" role="group" aria-label="Scoring system">
+        <button class="toggle-btn active" data-scoring="espn">ESPN</button>
+        <button class="toggle-btn" data-scoring="yahoo">YAHOO</button>
+        <button class="toggle-btn" data-scoring="fangraphs">FANGRAPHS</button>
+      </div>
+      <div class="dash-status" id="dashStatus">LOADING</div>
+    </header>
+
+    <!-- SECTION A: PLAYER OF THE DAY -->
+    <section class="hero-section">
+      <div class="section-eyebrow">PLAYER OF THE DAY</div>
+      <div class="hero-card" id="heroCard">
+        <div class="skeleton-block" style="height:240px;border-radius:10px;"></div>
+      </div>
+    </section>
+
+    <!-- SECTION B: WEEKLY STRIP -->
+    <section class="week-section">
+      <div class="section-eyebrow">TOP PERFORMANCES THIS WEEK</div>
+      <div class="week-strip-wrap">
+        <div class="week-strip" id="weekStrip">
+          <!-- JS populated -->
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION C: POSITION GRID -->
+    <section class="grid-section">
+      <div class="section-eyebrow">TODAY'S BEST BY POSITION</div>
+      <div class="position-grid">
+        <div class="hitters-col" id="hittersCol">
+          <div class="col-label">HITTERS</div>
+          <!-- JS populated -->
+        </div>
+        <div class="pitchers-col" id="pitchersCol">
+          <div class="col-label">PITCHERS</div>
+          <!-- JS populated -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modalOverlay" aria-hidden="true" role="dialog">
+    <div class="modal-panel" id="modalPanel">
+      <button class="modal-close" id="modalClose" aria-label="Close">&#x2715;</button>
+      <div class="modal-photo-row">
+        <img class="modal-photo" id="modalPhoto" alt="">
+        <div class="modal-name-block">
+          <div class="modal-name" id="modalName"></div>
+          <div class="modal-team-pos" id="modalTeamPos"></div>
+          <div class="modal-score-row">
+            <span class="modal-pts-label">TODAY</span>
+            <span class="modal-pts-value" id="modalPts"></span>
+            <span class="modal-pts-unit">PTS</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-breakdown" id="modalBreakdown"></div>
+      <div class="modal-ranks" id="modalRanks"></div>
+      <div class="modal-history-tabs" id="modalHistTabs">
+        <button class="hist-tab active" data-window="7">L7</button>
+        <button class="hist-tab" data-window="15">L15</button>
+        <button class="hist-tab" data-window="30">L30</button>
+      </div>
+      <div class="modal-history-body" id="modalHistBody">
+        <div class="hist-loading">Loading history...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
