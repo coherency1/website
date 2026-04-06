@@ -31,6 +31,8 @@
     --green-glow:      rgba(42, 154, 42, 0.4);
     --dodger-blue:     #005a9c;
     --dodger-light:    #4a8fe7;
+    --away-color:      #7a96b8;
+    --home-color:      #4a8fe7;
 
     --font-pixel:      'Press Start 2P', monospace;
     --font-body:       'DM Sans', system-ui, sans-serif;
@@ -350,9 +352,11 @@ body {
     flex: 1; display: flex; align-items: center; justify-content: center;
     padding: var(--sp-2) var(--sp-3); border-right: 2px solid var(--board-border);
 }
-.away-badge { background: linear-gradient(135deg, #8b2020, #a83030); border-bottom: 1px solid rgba(0,0,0,0.3); }
-.home-badge { background: linear-gradient(135deg, var(--dodger-blue), #0070bb); }
+.away-badge { background: linear-gradient(135deg, #8b2020, #a83030); border-bottom: 1px solid rgba(0,0,0,0.3); border-left: 3px solid var(--away-color); }
+.home-badge { background: linear-gradient(135deg, var(--dodger-blue), #0070bb); border-left: 3px solid var(--home-color); }
 .badge-abbr { font-size: 9px; color: var(--text-bright); letter-spacing: 0.06em; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+.away-badge .badge-abbr { color: var(--away-color); }
+.home-badge .badge-abbr { color: var(--home-color); }
 
 /* Inning indicator */
 .inning-indicator {
@@ -376,6 +380,8 @@ body {
 .score-table tbody tr:first-child td { border-bottom: 1px solid rgba(26,53,98,0.5); }
 .score-table td.active-inning { background: rgba(74,143,231,0.15); box-shadow: inset 0 -2px 0 var(--dodger-light); }
 .score-table th.active-inning { color: var(--dodger-light); }
+#awayRow .active-inning { color: var(--away-color); }
+#homeRow .active-inning { color: var(--home-color); }
 .score-table .extra-inning { border-left: 1px dashed var(--board-border); }
 
 /* Score change flash */
@@ -388,6 +394,8 @@ body {
 .rhe-label { font-size: 7px; color: var(--gold-dim); padding: 4px 0; border-bottom: 1px solid var(--board-border); width: 100%; text-align: center; background: rgba(0,0,0,0.15); }
 .rhe-val { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--gold); text-shadow: 0 0 8px var(--gold-glow); padding: 4px 0; }
 .rhe-val:first-of-type { border-bottom: 1px solid rgba(26,53,98,0.5); }
+#away-r { color: var(--away-color); text-shadow: 0 0 10px color-mix(in srgb, var(--away-color) 40%, transparent); }
+#home-r { color: var(--home-color); text-shadow: 0 0 10px color-mix(in srgb, var(--home-color) 40%, transparent); }
 
 /* B / S / O — massive */
 .score-count {
@@ -482,6 +490,8 @@ body {
 .gs-badge.final { background: var(--text-muted); color: var(--board-bg); }
 .gs-badge.pre-game { background: var(--board-accent); color: #fff; }
 .gs-teams { flex: 1; font-size: 10px; color: var(--text-bright); letter-spacing: 0.06em; }
+.gs-team-away { color: var(--away-color); }
+.gs-team-home { color: var(--home-color); }
 .gs-close {
     background: none; border: 1px solid var(--board-border);
     color: var(--text-muted); font-size: 10px; padding: 3px 8px;

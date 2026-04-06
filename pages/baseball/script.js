@@ -6,6 +6,19 @@
 
 const GAME = { feed: null, state: null, onUpdate: null };
 
+const TEAM_COLORS = {
+    'ARI': '#A71930', 'ATL': '#CE1141', 'BAL': '#DF4601',
+    'BOS': '#BD3039', 'CHC': '#0E3386', 'CWS': '#C4CED4',
+    'CIN': '#C6011F', 'CLE': '#E31937', 'COL': '#8B81C3',
+    'DET': '#FA4616', 'HOU': '#EB6E1F', 'KC':  '#7BB2DD',
+    'LAA': '#BA0021', 'LAD': '#4a8fe7', 'MIA': '#00A3E0',
+    'MIL': '#FFC52F', 'MIN': '#D31145', 'NYM': '#FF5910',
+    'NYY': '#C4CED4', 'OAK': '#006747', 'PHI': '#E81828',
+    'PIT': '#FDB827', 'SD':  '#A0785A', 'SF':  '#FD5A1E',
+    'SEA': '#4DC8C8', 'STL': '#C41E3A', 'TB':  '#F5D130',
+    'TEX': '#C0111F', 'TOR': '#1D6FA4', 'WSH': '#AB0003',
+};
+
 // ══════════════════════════════════════════════════════════
 // ── HUB DATA ─────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════
@@ -310,6 +323,13 @@ const VISIBLE_ROWS = 9;
         return apiFetch(`${LIVE_BASE}/game/${gamePk}/feed/live`);
     }
 
+    function applyTeamColors(awayAbbr, homeAbbr) {
+        const awayColor = TEAM_COLORS[awayAbbr] || '#7a96b8';
+        const homeColor = TEAM_COLORS[homeAbbr] || '#4a8fe7';
+        document.documentElement.style.setProperty('--away-color', awayColor);
+        document.documentElement.style.setProperty('--home-color', homeColor);
+    }
+
     // ── Render helpers ──
     function renderStatus(state, info) {
         $status.className = 'game-status';
@@ -333,6 +353,10 @@ const VISIBLE_ROWS = 9;
     function renderLinescore(linescore, gameData) {
         $awayName.textContent = gameData.teams.away.abbreviation || gameData.teams.away.teamName;
         $homeName.textContent = gameData.teams.home.abbreviation || gameData.teams.home.teamName;
+        applyTeamColors(
+            gameData.teams.away.abbreviation || gameData.teams.away.teamName,
+            gameData.teams.home.abbreviation || gameData.teams.home.teamName
+        );
 
         const innings = linescore.innings || [];
         const currentInning = linescore.currentInning || 0;
@@ -624,7 +648,7 @@ const VISIBLE_ROWS = 9;
         const label = isLive ? 'LIVE' : isFinal ? 'FINAL' : 'PRE-GAME';
         h += `<div class="gs-header">
             <span class="gs-badge ${badge}">${label}</span>
-            <span class="gs-teams">${awayAbbr} @ ${homeAbbr}</span>
+            <span class="gs-teams"><span class="gs-team-away">${awayAbbr}</span> @ <span class="gs-team-home">${homeAbbr}</span></span>
             <button class="gs-close" id="gsCloseBtn">✕</button>
         </div>`;
 
