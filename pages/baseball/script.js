@@ -449,8 +449,11 @@ const VISIBLE_ROWS = 9;
     // ── State renderers ──
     function renderPreGame(game) {
         renderStatus('PRE_GAME', formatTime(game.gameDate));
-        $awayName.textContent = game.teams?.away?.team?.abbreviation || 'AWAY';
-        $homeName.textContent = game.teams?.home?.team?.abbreviation || 'HOME';
+        const awayAbbr = game.teams?.away?.team?.abbreviation || 'AWAY';
+        const homeAbbr = game.teams?.home?.team?.abbreviation || 'HOME';
+        $awayName.textContent = awayAbbr;
+        $homeName.textContent = homeAbbr;
+        applyTeamColors(awayAbbr, homeAbbr);
         renderCount(0, 0, 0);
         renderInning(0, true);
 
