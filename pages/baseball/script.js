@@ -23,7 +23,7 @@ const HUB_ITEMS = {
         { num: '99', name: 'TBD',      pos: '---', url: null, status: 'PLANNED', stack: '---',      type: '---',  desc: 'Coming soon.' },
     ],
     apps: [
-        { num: '17', name: 'SCOREBOARD',  pos: 'LIV', url: '#scoreboard', status: 'ACTIVE',  stack: 'MLB API',  type: 'LIVE', desc: 'Real-time Dodgers scoreboard. Pulls live data from MLB Stats API — linescore, count, pitcher info. Auto-polls during games.' },
+        { num: '17', name: 'TBD',         pos: '---', url: null,          status: 'PLANNED', stack: '---',      type: '---',  desc: 'Coming soon.' },
         { num: '50', name: 'DRAFT ORDER', pos: 'RND', url: null,          status: 'PLANNED', stack: 'JS/CANVAS', type: 'TOOL', desc: 'Randomized draft order picker with fun visualizations — horse race, rain glass fill. For settling fantasy draft order disputes.' },
         { num: '7',  name: 'FANTASY',     pos: 'DSH', url: null,          status: 'PLANNED', stack: 'STATCAST',  type: 'DASH', desc: 'Fantasy baseball dashboard. Statcast-powered player cards, team comparisons, and performance tracking.' },
         { num: '14', name: 'RIGHT RESERVE', pos: 'WRI', url: 'https://thecoherency.substack.com', status: 'ACTIVE', stack: 'SUBSTACK', type: 'BLOG', desc: 'Right Reserve — baseball takes, random findings, and Coherency project writeups. A personal publication by Corey Chen.' },
