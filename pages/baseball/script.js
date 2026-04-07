@@ -225,6 +225,14 @@ const VISIBLE_ROWS = 9;
         $centerInfoCard.offsetHeight;
         $centerInfoCard.style.animation = '';
     }
+
+    GAME.clearSelection = function() {
+        if (selectedRow) {
+            selectedRow.classList.remove('selected');
+            selectedRow = null;
+            selectedItem = null;
+        }
+    };
 })();
 
 // ══════════════════════════════════════════════════════════
@@ -583,6 +591,7 @@ const VISIBLE_ROWS = 9;
         prevPanel = $centerInfoCard.style.display !== 'none' ? 'infocard' : 'gamestate';
         $centerInfoCard.style.display = 'none';
         $gs.style.display = '';
+        if (typeof GAME.clearSelection === 'function') GAME.clearSelection();
         render();
     }
 
