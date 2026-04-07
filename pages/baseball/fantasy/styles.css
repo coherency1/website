@@ -432,10 +432,10 @@ body {
 
 .stat-matrix {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-family: var(--font-mono);
   font-size: 12px;
-  min-width: 600px;
 }
 
 /* Column headers */
@@ -453,12 +453,12 @@ body {
   white-space: nowrap;
 }
 
-.th-rank   { text-align: left; padding-left: 16px; width: 52px; }
-.th-player { text-align: left; min-width: 140px; }
-.th-pos    { width: 48px; text-align: center; }
-.th-pts    { width: 68px; text-align: center; color: var(--accent); }
-.th-stat   { width: 68px; text-align: center; }
-.th-stats  { text-align: left; min-width: 180px; }
+.th-rank   { text-align: left; padding-left: 10px; width: 42px; }
+.th-player { text-align: left; /* fills remaining space */ }
+.th-pos    { width: 44px; text-align: center; }
+.th-pts    { width: 62px; text-align: center; color: var(--accent); }
+.th-stat   { width: 62px; text-align: center; }
+.th-stats  { width: 160px; text-align: left; }
 
 .th-sort {
   cursor: pointer;
@@ -487,7 +487,7 @@ body {
 
 .td-rank {
   text-align: left;
-  padding-left: 16px;
+  padding-left: 10px;
   font-size: 13px;
   font-weight: 700;
   color: var(--amber);
@@ -522,9 +522,8 @@ body {
 }
 
 .td-pts, .td-stat {
-  padding: 4px 4px;
+  padding: 3px 2px;
   text-align: center;
-  width: 68px;
 }
 
 .td-statline {
@@ -537,13 +536,13 @@ body {
 
 /* Heat-mapped stat cell */
 .stat-cell {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 5px 0;
   border-radius: 2px;
-  width: 60px;
+  width: 100%;
   transition: filter 200ms;
 }
 
