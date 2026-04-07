@@ -235,8 +235,9 @@ function buildStatLine(p) {
   if (p.isProjected) return buildProjStatLine(p);
   if (p.isPitcher || (p.isTwoWay && p.rawStats.pit)) {
     const pitParts = [];
-    const ip = parseInningsPitched(p.rawStats.pit.inningsPitched);
-    if (ip > 0) pitParts.push(`${ip % 1 === 0 ? ip : ip.toFixed(1)} IP`);
+    const rawIP = p.rawStats.pit.inningsPitched;
+    const ip    = parseInningsPitched(rawIP);
+    if (ip > 0) pitParts.push(`${displayIP(rawIP)} IP`);
     if (p.rawStats.pit.earnedRuns > 0) pitParts.push(`${p.rawStats.pit.earnedRuns} ER`);
     else if (p.rawStats.pit.earnedRuns === 0 && ip > 0) pitParts.push('0 ER');
     if (p.rawStats.pit.strikeOuts > 0) pitParts.push(`${p.rawStats.pit.strikeOuts} K`);
