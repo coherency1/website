@@ -1106,7 +1106,9 @@ function openModal(player, scoringKey, leaderboard) {
   const group = player.isPitcher ? 'pitching' : 'hitting';
   fetchPlayerGameLog(player.id, group).then(log => {
     _gameLog = log;
-    renderHistoryTab(log, 7, scoringKey);
+    const activeTab = document.querySelector('.hist-tab.active');
+    const w = activeTab ? parseInt(activeTab.dataset.window) : 7;
+    renderHistoryTab(log, w, scoringKey);
   }).catch(() => {
     histBody.innerHTML = '<div class="hist-loading">History unavailable.</div>';
   });
