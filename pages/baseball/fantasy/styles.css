@@ -664,7 +664,7 @@ body {
 
 .modal-photo {
   width: 72px;
-  height: 88px;
+  height: 102px;
   object-fit: cover;
   object-position: top;
   border: 1px solid var(--border-lt);
