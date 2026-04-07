@@ -742,13 +742,14 @@ function scoreAllPlayers(players, scoringKey) {
     return Object.assign({}, p, { fantasyScore: result.total, breakdown: result.breakdown });
   }).filter(p => {
     if (p.isPitcher) {
-      return p.fantasyScore !== 0 || parseInningsPitched((p.rawStats.pit && p.rawStats.pit.inningsPitched) || 0) > 0;
+      return p.rawStats.pit && p.rawStats.pit.inningsPitched !== undefined;
     } else {
       return p.fantasyScore !== 0 || ((p.rawStats.bat && p.rawStats.bat.atBats) || 0) > 0;
     }
   });
 
   const all = scored.slice().sort((a, b) => b.fantasyScore - a.fantasyScore);
+  all.forEach((p, i) => { p.globalRank = i + 1; });
   const batters = all.filter(p => !p.isPitcher);
   const pitchers = all.filter(p => p.isPitcher);
   return { all, batters, pitchers, _rawStats: players };
@@ -964,7 +965,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
     });
 
     const mkAllRow = (p, i, statCells) => {
-      const rankStr  = '#' + String(i + 1).padStart(2, '0');
+      const rankStr  = '#' + String(p.globalRank).padStart(2, '0');
       const ptsBg    = heatPts(ptsPct(p.fantasyScore));
       const { color } = teamMeta(p.teamAbbr);
       const rowStyle = `border-left:3px solid ${hexToRgba(color,0.55)};background:${hexToRgba(color,0.02)};`;
@@ -1006,7 +1007,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
 
   } else {
     body.innerHTML = sorted.map((p, i) => {
-      const rankStr = '#' + String(i + 1).padStart(2, '0');
+      const rankStr = '#' + String(p.globalRank).padStart(2, '0');
       const ptsBg   = heatPts(ptsPct(p.fantasyScore));
       const { color } = teamMeta(p.teamAbbr);
       const rowStyle = `border-left:3px solid ${hexToRgba(color,0.55)};background:${hexToRgba(color,0.02)};`;
