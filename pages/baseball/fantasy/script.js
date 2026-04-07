@@ -42,6 +42,7 @@ const POS_ELIGIBLE = {
 // Position filter functions for the filter rail
 const POS_FILTER_FN = {
   ALL:  () => true,
+  HIT:  (p) => !p.isPitcher,
   SP:   (p) => p.isPitcher && p.isStarter,
   RP:   (p) => p.isPitcher && !p.isStarter,
   C:    (p) => !p.isPitcher && p.posCode === '2',
@@ -49,8 +50,13 @@ const POS_FILTER_FN = {
   '2B': (p) => !p.isPitcher && p.posCode === '4',
   '3B': (p) => !p.isPitcher && p.posCode === '5',
   SS:   (p) => !p.isPitcher && p.posCode === '6',
+  IF:   (p) => !p.isPitcher && ['3','4','5','6'].includes(p.posCode),
   OF:   (p) => !p.isPitcher && ['7','8','9'].includes(p.posCode),
+  DH:   (p) => !p.isPitcher && p.posCode === '10',
 };
+
+// Filters that show batters and use BAT_COLS
+const BATTER_FILTERS = ['HIT', 'C', '1B', '2B', '3B', 'SS', 'IF', 'OF', 'DH'];
 
 // Stat column definitions for heat-mapped table
 const BAT_COLS = [
@@ -163,12 +169,29 @@ function buildStatLine(p) {
   }
 }
 
-// Heat map background: teal (high pct) → purple (low pct)
+// Heat map background for stat columns: teal (high) → purple (low)
 function heatBg(pct) {
   const hue  = 270 - (pct / 100) * 90;
   const sat  = 20  + (pct / 100) * 40;
   const lgt  = 12  + (pct / 100) * 9;
   return `hsl(${hue.toFixed(0)},${sat.toFixed(0)}%,${lgt.toFixed(0)}%)`;
+}
+
+// Heat map for PTS column: amber (high) → near-black (low)
+function heatPts(pct) {
+  const sat = 10  + (pct / 100) * 85;
+  const lgt = 7   + (pct / 100) * 20;
+  return `hsl(38,${sat.toFixed(0)}%,${lgt.toFixed(0)}%)`;
+}
+
+// Display innings pitched in MLB .1/.2 notation (6.1 = 6⅓, 6.2 = 6⅔)
+function displayIP(raw) {
+  if (raw === null || raw === undefined || raw === '') return '0';
+  const str = String(raw);
+  if (!str.includes('.')) return str || '0';
+  const [whole, frac] = str.split('.');
+  if (!frac || frac === '0') return whole || '0';
+  return `${whole}.${frac}`;
 }
 
 // Percentile rank of val within sorted ascending array
@@ -302,7 +325,7 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
         posCode: '1',
         posAbbr: (p.position && p.position.abbreviation) || 'P',
         isPitcher: true,
-        isStarter: (p.position && p.position.abbreviation) === 'SP',
+        isStarter: (typeof pit.gamesStarted === 'number' ? pit.gamesStarted > 0 : idx === 0),
         gamePk,
         date: date || todayStr(),
         rawStats: { pit },
@@ -405,18 +428,18 @@ function buildHeroHTML(player, label, scoringKey, leaderboard) {
 }
 
 function renderHeroPair(leaderboard, scoringKey) {
-  const overall   = leaderboard.all[0]     || null;
-  const topHitter = leaderboard.batters[0] || null;
+  const topPitcher = leaderboard.pitchers[0] || null;
+  const topHitter  = leaderboard.batters[0]  || null;
 
   const heroCard       = document.getElementById('heroCard');
   const heroHitterCard = document.getElementById('heroHitterCard');
 
-  heroCard.innerHTML       = buildHeroHTML(overall,   '// PLAYER_OF_THE_DAY', scoringKey, leaderboard);
-  heroHitterCard.innerHTML = buildHeroHTML(topHitter, '// TOP_HITTER',        scoringKey, leaderboard);
+  heroCard.innerHTML       = buildHeroHTML(topPitcher, '// PITCHER_OF_THE_DAY', scoringKey, leaderboard);
+  heroHitterCard.innerHTML = buildHeroHTML(topHitter,  '// HITTER_OF_THE_DAY',  scoringKey, leaderboard);
 
-  if (overall) {
+  if (topPitcher) {
     heroCard.style.cursor = 'pointer';
-    heroCard.onclick = () => openModal(overall, scoringKey, leaderboard);
+    heroCard.onclick = () => openModal(topPitcher, scoringKey, leaderboard);
   }
   if (topHitter) {
     heroHitterCard.style.cursor = 'pointer';
@@ -436,7 +459,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
     filtered.length ? `${filtered.length} RECORDS` : '';
 
   const isPitcherView = posFilter === 'SP' || posFilter === 'RP';
-  const isBatterView  = ['C', '1B', '2B', '3B', 'SS', 'OF'].includes(posFilter);
+  const isBatterView  = BATTER_FILTERS.includes(posFilter);
   const isAllView     = !isPitcherView && !isBatterView;
   const cols          = isPitcherView ? PIT_COLS : isBatterView ? BAT_COLS : null;
 
@@ -484,7 +507,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
   body.innerHTML = filtered.map((p, i) => {
     const rankStr = '#' + String(i + 1).padStart(2, '0');
     const pct     = ptsPct(p.fantasyScore);
-    const ptsBg   = heatBg(pct);
+    const ptsBg   = heatPts(pct);
 
     const ptsCellHTML = `<td class="td-pts">
       <div class="stat-cell" style="background:${ptsBg}">
@@ -513,7 +536,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
       const cPct = pctFns[col.key](val);
       const bg   = heatBg(cPct);
       const disp = col.key === 'IP'
-        ? (val % 1 === 0 ? val : val.toFixed(1))
+        ? displayIP(p.rawStats.pit.inningsPitched)
         : val;
       return `<td class="td-stat">
         <div class="stat-cell" style="background:${bg}">
