@@ -538,6 +538,7 @@ const VISIBLE_ROWS = 9;
             if (s === 'Live') { const f = await fetchLiveFeed(currentGamePk); gameState = 'LIVE'; renderLive(f); GAME.feed = f; GAME.state = 'LIVE'; }
             else if (s === 'Final') { const f = await fetchLiveFeed(currentGamePk); gameState = 'FINAL'; renderFinal(f); GAME.feed = f; GAME.state = 'FINAL'; }
             else { const f = await fetchLiveFeed(currentGamePk); gameState = 'PRE_GAME'; renderPreGame(game); GAME.feed = f; GAME.state = 'PRE_GAME'; }
+            if (GAME.onUpdate) GAME.onUpdate();
         } catch (e) { console.error('Init:', e); gameState = 'ERROR'; renderError(); }
     }
 
