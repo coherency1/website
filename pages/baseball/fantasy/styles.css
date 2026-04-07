@@ -432,10 +432,10 @@ body {
 
 .stat-matrix {
   width: 100%;
-  table-layout: fixed;
   border-collapse: collapse;
   font-family: var(--font-mono);
   font-size: 12px;
+  min-width: 600px;
 }
 
 /* Column headers */
@@ -453,12 +453,12 @@ body {
   white-space: nowrap;
 }
 
-.th-rank   { text-align: left; padding-left: 10px; width: 42px; }
-.th-player { text-align: left; /* fills remaining space */ }
-.th-pos    { width: 44px; text-align: center; }
-.th-pts    { width: 62px; text-align: center; color: var(--accent); }
-.th-stat   { width: 62px; text-align: center; }
-.th-stats  { width: 160px; text-align: left; }
+.th-rank   { text-align: left; padding-left: 10px; white-space: nowrap; width: 44px; }
+.th-player { text-align: left; }
+.th-pos    { text-align: center; width: 7%; }
+.th-pts    { text-align: center; width: 9%; color: var(--accent); }
+.th-stat   { text-align: center; width: 9%; }
+.th-stats  { text-align: left; width: 18%; }
 
 .th-sort {
   cursor: pointer;
