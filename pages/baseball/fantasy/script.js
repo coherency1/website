@@ -122,6 +122,12 @@ function todayStr() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 }
 
+function yesterdayStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+}
+
 async function apiFetch(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`API error ${res.status}: ${url}`);
@@ -140,7 +146,7 @@ function parseInningsPitched(s) {
 function setDashStatus(state, msg) {
   const el = document.getElementById('dashStatus');
   if (!el) return;
-  const labels = { loading: '● LOADING', ready: '● LIVE', error: '● ERROR', 'no-games': '● OFF DAY' };
+  const labels = { loading: '● LOADING', ready: '● LIVE', prev: '● PREV', proj: '● PROJ', error: '● ERROR', 'no-games': '● OFF DAY' };
   el.textContent = msg || labels[state] || state.toUpperCase();
   el.className = 'dash-status status-' + state;
 }
@@ -281,14 +287,28 @@ function scorePitcher(pit, sys) {
 // ── SECTION 5 — DATA FETCHING ─────────────────────────────
 // ══════════════════════════════════════════════════════════
 
-async function fetchTodaySchedule() {
-  const data = await apiFetch(`${API}/schedule?sportId=1&date=${todayStr()}&gameType=R`);
+async function fetchScheduleForDate(dateStr) {
+  const data = await apiFetch(`${API}/schedule?sportId=1&date=${dateStr}&gameType=R`);
   const dates = data.dates || [];
   if (!dates.length) return [];
   const games = dates[0].games || [];
   return games
     .filter(g => g.status.abstractGameState === 'Final' || g.status.abstractGameState === 'Live')
     .map(g => g.gamePk);
+}
+
+// Returns { gamePks, date, isYesterday }
+// Tries today's Final/Live games first; falls back to yesterday if none found yet.
+async function resolveGameDate() {
+  const today = todayStr();
+  const todayPks = await fetchScheduleForDate(today);
+  if (todayPks.length) return { gamePks: todayPks, date: today, isYesterday: false };
+
+  const yesterday = yesterdayStr();
+  const yestPks = await fetchScheduleForDate(yesterday);
+  if (yestPks.length) return { gamePks: yestPks, date: yesterday, isYesterday: true };
+
+  return { gamePks: [], date: today, isYesterday: false };
 }
 
 async function fetchBoxscore(gamePk) {
@@ -370,6 +390,90 @@ async function fetchPlayerGameLog(playerId, group, season) {
     opponent: (s.opponent && s.opponent.abbreviation) || '',
     isHome: s.isHome,
   }));
+}
+
+const FG_POS_TO_CODE = {
+  'C':'2','1B':'3','2B':'4','3B':'5','SS':'6',
+  'LF':'7','CF':'8','RF':'9','OF':'7','DH':'10',
+  'SP':'1','RP':'1','P':'1',
+};
+
+async function fetchFanGraphsProjections() {
+  const FG = 'https://www.fangraphs.com/api/projections';
+  const [batData, pitData] = await Promise.all([
+    apiFetch(`${FG}?pos=all&stats=bat&type=steamer&team=0&lg=all&players=0`),
+    apiFetch(`${FG}?pos=all&stats=pit&type=steamer&team=0&lg=all&players=0`),
+  ]);
+
+  const players = [];
+
+  for (const p of (batData || [])) {
+    const g = p.G || p.g || 1;
+    if (g < 20 || !p.Name) continue;
+    const posStr = (p.pos || p.Pos || '').toUpperCase();
+    players.push({
+      id: p.mlbamid || p.MLBAMID || null,
+      name: p.Name,
+      teamAbbr: (p.Team || '—').toUpperCase(),
+      teamName: p.Team || '—',
+      posCode: FG_POS_TO_CODE[posStr] || '0',
+      posAbbr: posStr || '?',
+      isPitcher: false,
+      isStarter: false,
+      isProjected: true,
+      rawStats: {
+        bat: {
+          hits:         (p.H   || 0) / g,
+          doubles:      (p['2B'] || 0) / g,
+          triples:      (p['3B'] || 0) / g,
+          homeRuns:     (p.HR  || 0) / g,
+          runs:         (p.R   || 0) / g,
+          rbi:          (p.RBI || 0) / g,
+          baseOnBalls:  (p.BB  || 0) / g,
+          stolenBases:  (p.SB  || 0) / g,
+          caughtStealing: (p.CS || 0) / g,
+          strikeOuts:   (p.SO  || 0) / g,
+          hitByPitch:   (p.HBP || 0) / g,
+          atBats:       (p.AB  || p.PA || 1) / g,
+        }
+      },
+    });
+  }
+
+  for (const p of (pitData || [])) {
+    const gs = p.GS || p.gs || 0;
+    const g  = p.G  || p.g  || 1;
+    const isStarter = gs >= 5;
+    const div = isStarter ? Math.max(gs, 1) : Math.max(g, 1);
+    if (div < 5 || !p.Name) continue;
+    players.push({
+      id: p.mlbamid || p.MLBAMID || null,
+      name: p.Name,
+      teamAbbr: (p.Team || '—').toUpperCase(),
+      teamName: p.Team || '—',
+      posCode: '1',
+      posAbbr: isStarter ? 'SP' : 'RP',
+      isPitcher: true,
+      isStarter,
+      isProjected: true,
+      rawStats: {
+        pit: {
+          inningsPitched: (p.IP || 0) / div,
+          strikeOuts:     (p.K  || p.SO || 0) / div,
+          earnedRuns:     (p.ER || 0) / div,
+          wins:           (p.W  || 0) / div,
+          losses:         (p.L  || 0) / div,
+          saves:          (p.SV || 0) / div,
+          holds:          (p.HLD || 0) / div,
+          baseOnBalls:    (p.BB || 0) / div,
+          hits:           (p.H  || 0) / div,
+          blownSaves:     (p.BS || 0) / div,
+        }
+      },
+    });
+  }
+
+  return players;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -652,11 +756,13 @@ function openModal(player, scoringKey, leaderboard) {
   const ranks      = document.getElementById('modalRanks');
   const histBody   = document.getElementById('modalHistBody');
 
-  photo.src = HEADSHOT(player.id);
+  photo.src = player.id ? HEADSHOT(player.id) : HEADSHOT_FALLBACK;
   photo.onerror = () => { photo.src = HEADSHOT_FALLBACK; };
   name.textContent = player.name;
   teamPos.textContent = `${player.teamAbbr} · ${player.posAbbr}`;
   pts.textContent = player.fantasyScore.toFixed(1);
+  const ptsLabel = document.getElementById('modalPtsLabel');
+  if (ptsLabel) ptsLabel.textContent = player.isProjected ? 'PROJ/G' : 'TODAY';
 
   breakdown.innerHTML = '<div class="breakdown-title">// SCORING_BREAKDOWN</div>' +
     player.breakdown.map(b => `
@@ -820,18 +926,18 @@ function initModalListeners() {
   });
 }
 
-function initDateLabel() {
+function initDateLabel(dateStr, isYesterday, isProjected) {
   const el = document.getElementById('dashDate');
-  if (el) {
-    el.textContent = new Date().toLocaleDateString('en-US', {
-      timeZone: 'America/Los_Angeles',
-      month: 'short', day: 'numeric', year: 'numeric'
-    }).toUpperCase();
-  }
+  if (!el) return;
+  if (isProjected) { el.textContent = 'STEAMER PROJ · PER GAME'; return; }
+  const d = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
+  const label = d.toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  }).toUpperCase();
+  el.textContent = isYesterday ? `${label} · PREV` : label;
 }
 
 async function init() {
-  initDateLabel();
   initScoringToggle();
   initPosFilter();
   initModalListeners();
@@ -841,15 +947,32 @@ async function init() {
   const scoringKey = getScoringSystem();
 
   try {
-    const gamePks = await fetchTodaySchedule();
+    const { gamePks, date, isYesterday } = await resolveGameDate();
+    initDateLabel(date, isYesterday, false);
 
     if (!gamePks.length) {
-      renderNoGames();
-      setDashStatus('no-games');
+      try {
+        const projPlayers = await fetchFanGraphsProjections();
+        if (projPlayers.length) {
+          const leaderboard = buildLeaderboard(projPlayers, scoringKey);
+          leaderboard._rawStats = projPlayers;
+          _leaderboard = leaderboard;
+          initDateLabel(date, false, true);
+          renderHeroPair(leaderboard, scoringKey);
+          renderStatMatrix(leaderboard, _posFilter, scoringKey);
+          setDashStatus('proj');
+        } else {
+          renderNoGames();
+          setDashStatus('no-games');
+        }
+      } catch (_) {
+        renderNoGames();
+        setDashStatus('no-games');
+      }
       return;
     }
 
-    const allStats   = await fetchAllBoxscores(gamePks, todayStr());
+    const allStats   = await fetchAllBoxscores(gamePks, date);
     const leaderboard = buildLeaderboard(allStats, scoringKey);
     leaderboard._rawStats = allStats;
     _leaderboard = leaderboard;
@@ -860,7 +983,7 @@ async function init() {
     } else {
       renderHeroPair(leaderboard, scoringKey);
       renderStatMatrix(leaderboard, _posFilter, scoringKey);
-      setDashStatus('ready');
+      setDashStatus(isYesterday ? 'prev' : 'ready');
     }
 
   } catch (err) {

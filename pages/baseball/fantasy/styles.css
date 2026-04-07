@@ -183,6 +183,8 @@ body {
 }
 
 .status-ready    { color: var(--accent); }
+.status-prev     { color: #a0a0ff; }
+.status-proj     { color: #ffcc44; }
 .status-error    { color: var(--red); }
 .status-no-games { color: var(--text-muted); }
 
