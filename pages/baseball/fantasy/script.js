@@ -910,7 +910,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
       <th class="th-player th-sort" data-sort="player" ${thCls('player')}>PLAYER${ind('player')}</th>
       <th class="th-pos">POS</th>
       <th class="th-pts th-sort" data-sort="pts" ${thCls('pts')}>PTS${ind('pts')}</th>
-      <th class="th-stats">STATS</th>
+      ${Array(BAT_COLS.length).fill('<th class="th-stat"></th>').join('')}
     </tr>`;
   } else {
     const statThs = cols.map(c =>
@@ -940,60 +940,99 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
 
   // Build tbody
   const body = document.getElementById('matrixBody');
+  const ALL_NCOLS = 4 + BAT_COLS.length;
   if (!sorted.length) {
-    const colCount = isAllView ? 5 : 3 + (cols ? cols.length : 0);
+    const colCount = isAllView ? ALL_NCOLS : 3 + (cols ? cols.length : 0);
     body.innerHTML = `<tr><td colspan="${colCount}" class="td-empty">NO DATA FOR THIS FILTER</td></tr>`;
     return;
   }
 
-  body.innerHTML = sorted.map((p, i) => {
-    const rankStr = '#' + String(i + 1).padStart(2, '0');
-    const ptsBg   = heatPts(ptsPct(p.fantasyScore));
-    const { color } = teamMeta(p.teamAbbr);
-    const rowStyle = `border-left:3px solid ${hexToRgba(color,0.55)};background:${hexToRgba(color,0.02)};`;
+  if (isAllView) {
+    // Split into batter / pitcher groups, preserving global sorted index for rank + click
+    const batGrp = [], pitGrp = [];
+    sorted.forEach((p, i) => { (p.isPitcher ? pitGrp : batGrp).push({ p, i }); });
 
-    const ptsCellHTML = `<td class="td-pts">
-      <div class="stat-cell" style="background:${ptsBg}">
-        <span class="stat-val">${p.fantasyScore.toFixed(1)}</span>
-      </div>
-    </td>`;
+    // Percentile calc per group
+    const batPctFns = {}, pitPctFns = {};
+    BAT_COLS.forEach(col => {
+      const vals = batGrp.map(({ p }) => col.fn(p)).sort((a, b) => a - b);
+      batPctFns[col.key] = (val) => pctRank(val, vals, col.inv);
+    });
+    PIT_COLS.forEach(col => {
+      const vals = pitGrp.map(({ p }) => col.fn(p)).sort((a, b) => a - b);
+      pitPctFns[col.key] = (val) => pctRank(val, vals, col.inv);
+    });
 
-    const playerCellHTML = `<td class="td-player">
-      <span class="player-name">${p.name}</span>
-      <span class="player-team">${p.teamAbbr}</span>
-    </td>`;
-
-    if (isAllView) {
+    const mkAllRow = (p, i, statCells) => {
+      const rankStr  = '#' + String(i + 1).padStart(2, '0');
+      const ptsBg    = heatPts(ptsPct(p.fantasyScore));
+      const { color } = teamMeta(p.teamAbbr);
+      const rowStyle = `border-left:3px solid ${hexToRgba(color,0.55)};background:${hexToRgba(color,0.02)};`;
       return `<tr class="matrix-row" data-idx="${i}" style="${rowStyle}">
         <td class="td-rank">${rankStr}</td>
-        ${playerCellHTML}
+        <td class="td-player"><span class="player-name">${p.name}</span><span class="player-team">${p.teamAbbr}</span></td>
         <td class="td-pos">${p.posAbbr}</td>
-        ${ptsCellHTML}
-        <td class="td-statline">${buildStatLine(p)}</td>
+        <td class="td-pts"><div class="stat-cell" style="background:${ptsBg}"><span class="stat-val">${p.fantasyScore.toFixed(1)}</span></div></td>
+        ${statCells}
       </tr>`;
-    }
+    };
 
-    const statCells = cols.map(col => {
-      const val  = col.fn(p);
-      const cPct = pctFns[col.key](val);
-      const bg   = heatBg(cPct);
-      const disp = col.key === 'IP'
-        ? displayIP(p.rawStats.pit.inningsPitched)
-        : val;
-      return `<td class="td-stat">
-        <div class="stat-cell" style="background:${bg}">
-          <span class="stat-val">${disp}</span>
-        </div>
-      </td>`;
+    const batSubHead = `<tr class="section-subhead"><th></th><th></th><th></th><th></th>${BAT_COLS.map(c=>`<th class="th-stat">${c.label}</th>`).join('')}</tr>`;
+    const pitSubHead = `<tr class="section-subhead"><th></th><th></th><th></th><th></th>${PIT_COLS.map(c=>`<th class="th-stat">${c.label}</th>`).join('')}${Array(BAT_COLS.length - PIT_COLS.length).fill('<th></th>').join('')}</tr>`;
+    const PAD = Array(BAT_COLS.length - PIT_COLS.length).fill('<td class="td-stat"></td>').join('');
+
+    const batRows = batGrp.map(({ p, i }) => {
+      const cells = BAT_COLS.map(col => {
+        const val = col.fn(p);
+        const bg  = heatBg(batPctFns[col.key](val));
+        return `<td class="td-stat"><div class="stat-cell" style="background:${bg}"><span class="stat-val">${val}</span></div></td>`;
+      }).join('');
+      return mkAllRow(p, i, cells);
     }).join('');
 
-    return `<tr class="matrix-row" data-idx="${i}" style="${rowStyle}">
-      <td class="td-rank">${rankStr}</td>
-      ${playerCellHTML}
-      ${ptsCellHTML}
-      ${statCells}
-    </tr>`;
-  }).join('');
+    const pitRows = pitGrp.map(({ p, i }) => {
+      const cells = PIT_COLS.map(col => {
+        const val  = col.fn(p);
+        const bg   = heatBg(pitPctFns[col.key](val));
+        const disp = col.key === 'IP' ? displayIP(p.rawStats.pit.inningsPitched) : val;
+        return `<td class="td-stat"><div class="stat-cell" style="background:${bg}"><span class="stat-val">${disp}</span></div></td>`;
+      }).join('') + PAD;
+      return mkAllRow(p, i, cells);
+    }).join('');
+
+    body.innerHTML =
+      (batGrp.length  ? `<tr class="section-header-row"><td colspan="${ALL_NCOLS}" class="section-label">// BATTERS</td></tr>${batSubHead}${batRows}` : '') +
+      (pitGrp.length  ? `<tr class="section-header-row"><td colspan="${ALL_NCOLS}" class="section-label">// PITCHERS</td></tr>${pitSubHead}${pitRows}` : '');
+
+  } else {
+    body.innerHTML = sorted.map((p, i) => {
+      const rankStr = '#' + String(i + 1).padStart(2, '0');
+      const ptsBg   = heatPts(ptsPct(p.fantasyScore));
+      const { color } = teamMeta(p.teamAbbr);
+      const rowStyle = `border-left:3px solid ${hexToRgba(color,0.55)};background:${hexToRgba(color,0.02)};`;
+
+      const statCells = cols.map(col => {
+        const val  = col.fn(p);
+        const cPct = pctFns[col.key](val);
+        const bg   = heatBg(cPct);
+        const disp = col.key === 'IP'
+          ? displayIP(p.rawStats.pit.inningsPitched)
+          : val;
+        return `<td class="td-stat">
+          <div class="stat-cell" style="background:${bg}">
+            <span class="stat-val">${disp}</span>
+          </div>
+        </td>`;
+      }).join('');
+
+      return `<tr class="matrix-row" data-idx="${i}" style="${rowStyle}">
+        <td class="td-rank">${rankStr}</td>
+        <td class="td-player"><span class="player-name">${p.name}</span><span class="player-team">${p.teamAbbr}</span></td>
+        <td class="td-pts"><div class="stat-cell" style="background:${ptsBg}"><span class="stat-val">${p.fantasyScore.toFixed(1)}</span></div></td>
+        ${statCells}
+      </tr>`;
+    }).join('');
+  }
 
   // Wire row click → modal (use sorted index)
   body.querySelectorAll('.matrix-row').forEach(row => {

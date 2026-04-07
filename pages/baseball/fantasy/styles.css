@@ -535,6 +535,26 @@ body {
   letter-spacing: 0.03em;
 }
 
+/* ALL-view section dividers */
+.section-header-row .section-label {
+  padding: 6px 10px;
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  background: var(--surface);
+  border-top: 1px solid var(--border-lt);
+}
+.section-subhead th {
+  padding: 4px 0;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-align: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
 /* Heat-mapped stat cell */
 .stat-cell {
   display: flex;
