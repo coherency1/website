@@ -1055,6 +1055,23 @@ function openModal(player, scoringKey, leaderboard) {
   const ranks      = document.getElementById('modalRanks');
   const histBody   = document.getElementById('modalHistBody');
 
+  // Team color + logo on photo row
+  const { color: tColor, logoUrl: tLogo } = teamMeta(player.teamAbbr);
+  const photoRow = document.getElementById('modalPhotoRow');
+  if (photoRow) {
+    photoRow.style.borderLeft  = `3px solid ${hexToRgba(tColor, 0.7)}`;
+    photoRow.style.background  = `linear-gradient(135deg,${hexToRgba(tColor,0.07)} 0%,transparent 60%)`;
+    // Remove old logo if any, inject new one
+    const old = photoRow.querySelector('.modal-team-logo');
+    if (old) old.remove();
+    if (tLogo) {
+      const logoDiv = document.createElement('div');
+      logoDiv.className = 'modal-team-logo';
+      logoDiv.style.backgroundImage = `url('${tLogo}')`;
+      photoRow.appendChild(logoDiv);
+    }
+  }
+
   photo.src = player.id ? HEADSHOT(player.id) : HEADSHOT_FALLBACK;
   photo.onerror = () => { photo.src = HEADSHOT_FALLBACK; };
   name.textContent = player.name;
