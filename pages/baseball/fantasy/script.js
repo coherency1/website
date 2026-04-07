@@ -889,7 +889,6 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
       return `<td class="td-stat">
         <div class="stat-cell" style="background:${bg}">
           <span class="stat-val">${disp}</span>
-          <span class="stat-pct">${cPct}</span>
         </div>
       </td>`;
     }).join('');
