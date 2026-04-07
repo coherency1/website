@@ -8,8 +8,8 @@ const API = 'https://statsapi.mlb.com/api/v1';
 
 const SCORING_SYSTEMS = {
   espn: {
-    bat: { H: 1, '2B': 1, '3B': 3, HR: 4, R: 1, RBI: 1, BB: 1, SB: 2, CS: -1, K: -1, HBP: 0 },
-    pit: { IP: 3, K: 1, W: 3, SV: 5, HLD: 2, BS: 0, ER: -2, BB: -1 }
+    bat: { TB: 1, R: 1, RBI: 1, BB: 1, SB: 1, K: -1 },
+    pit: { IP: 3, K: 1, W: 2, L: -2, SV: 5, HLD: 2, ER: -2, H: -1, BB: -1 }
   },
   yahoo: {
     bat: { H: 1, '2B': 1, '3B': 2, HR: 5, R: 1, RBI: 1, BB: 1, SB: 2, CS: -1, K: -1, HBP: 0 },
@@ -224,17 +224,24 @@ function scoreBatter(bat, sys) {
     breakdown.push({ label, count, rate, pts });
   };
 
-  if (singles > 0) add('Singles', singles, s.H);
-  if (doubles > 0) add('Doubles', doubles, s.H + s['2B']);
-  if (triples > 0) add('Triples', triples, s.H + s['3B']);
-  if (hr > 0) add('Home Runs', hr, s.HR);
+  if (s.TB) {
+    // TB-based scoring: 1B=1TB, 2B=2TB, 3B=3TB, HR=4TB
+    const tb = singles + 2 * doubles + 3 * triples + 4 * hr;
+    if (tb > 0) add('Total Bases', tb, s.TB);
+  } else {
+    // Per-hit-type scoring (Yahoo / FanGraphs)
+    if (singles > 0) add('Singles', singles, s.H);
+    if (doubles > 0) add('Doubles', doubles, s.H + s['2B']);
+    if (triples > 0) add('Triples', triples, s.H + s['3B']);
+    if (hr > 0) add('Home Runs', hr, s.HR);
+  }
   add('Runs', bat.runs || 0, s.R);
   add('RBI', bat.rbi || 0, s.RBI);
   add('Walks', bat.baseOnBalls || 0, s.BB);
   add('Stolen Bases', bat.stolenBases || 0, s.SB);
-  if ((bat.caughtStealing || 0) > 0) add('Caught Stealing', bat.caughtStealing, s.CS);
-  if ((bat.strikeOuts || 0) > 0 && s.K !== 0) add('Strikeouts', bat.strikeOuts, s.K);
-  if ((bat.hitByPitch || 0) > 0 && s.HBP !== 0) add('HBP', bat.hitByPitch, s.HBP);
+  if ((bat.caughtStealing || 0) > 0 && s.CS) add('Caught Stealing', bat.caughtStealing, s.CS);
+  if ((bat.strikeOuts || 0) > 0 && s.K) add('Strikeouts', bat.strikeOuts, s.K);
+  if ((bat.hitByPitch || 0) > 0 && s.HBP) add('HBP', bat.hitByPitch, s.HBP);
 
   return { total: Math.round(total * 10) / 10, breakdown };
 }
@@ -258,12 +265,14 @@ function scorePitcher(pit, sys) {
     breakdown.push({ label: 'Innings Pitched', count: ip.toFixed(2), rate: s.IP, pts: Math.round(pts * 10) / 10 });
   }
   add('Strikeouts', pit.strikeOuts || 0, s.K);
-  add('Walks', pit.baseOnBalls || 0, s.BB);
-  if ((pit.earnedRuns || 0) > 0) add('Earned Runs', pit.earnedRuns, s.ER);
+  add('Walks Issued', pit.baseOnBalls || 0, s.BB);
+  if ((pit.earnedRuns || 0) > 0 && s.ER) add('Earned Runs', pit.earnedRuns, s.ER);
+  if ((pit.hits || 0) > 0 && s.H) add('Hits Allowed', pit.hits, s.H);
   add('Wins', pit.wins || 0, s.W);
+  if ((pit.losses || 0) > 0 && s.L) add('Losses', pit.losses, s.L);
   add('Saves', pit.saves || 0, s.SV);
   add('Holds', pit.holds || 0, s.HLD);
-  if ((pit.blownSaves || 0) > 0 && s.BS !== 0) add('Blown Saves', pit.blownSaves, s.BS);
+  if ((pit.blownSaves || 0) > 0 && s.BS) add('Blown Saves', pit.blownSaves, s.BS);
 
   return { total: Math.round(total * 10) / 10, breakdown };
 }
