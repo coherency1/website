@@ -237,6 +237,11 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 32px;
+  transition: grid-template-columns 200ms;
+}
+
+.hero-pair.has-pos-card {
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .hero-slot {
@@ -873,8 +878,13 @@ body {
    SECTION 11 — RESPONSIVE
    ══════════════════════════════════════════ */
 
+@media (max-width: 1080px) {
+  .hero-pair.has-pos-card { grid-template-columns: 1fr 1fr; }
+}
+
 @media (max-width: 860px) {
-  .hero-pair { grid-template-columns: 1fr; }
+  .hero-pair,
+  .hero-pair.has-pos-card { grid-template-columns: 1fr; }
   .dash-topbar { gap: 12px; }
   .scoring-toggle { margin-left: 0; }
 }

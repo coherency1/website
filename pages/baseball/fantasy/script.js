@@ -110,7 +110,7 @@ function setScoringSystem(key) {
 
 function reRender(scoringKey) {
   _leaderboard = rebuildLeaderboard(_leaderboard._rawStats, scoringKey);
-  renderHeroPair(_leaderboard, scoringKey);
+  renderHeroPair(_leaderboard, _posFilter, scoringKey);
   renderStatMatrix(_leaderboard, _posFilter, scoringKey);
 }
 
@@ -436,12 +436,23 @@ function buildHeroHTML(player, label, scoringKey, leaderboard) {
   `;
 }
 
-function renderHeroPair(leaderboard, scoringKey) {
+const POS_LABELS = {
+  SP: '// TOP_STARTER', RP: '// TOP_RELIEVER',
+  C:  '// TOP_C',   '1B': '// TOP_1B', '2B': '// TOP_2B',
+  '3B': '// TOP_3B', SS: '// TOP_SS',  IF:  '// TOP_IF',
+  OF: '// TOP_OF',  DH:  '// TOP_DH',
+};
+
+const GENERAL_FILTERS = ['ALL', 'HIT'];
+
+function renderHeroPair(leaderboard, posFilter, scoringKey) {
   const topPitcher = leaderboard.pitchers[0] || null;
   const topHitter  = leaderboard.batters[0]  || null;
 
   const heroCard       = document.getElementById('heroCard');
   const heroHitterCard = document.getElementById('heroHitterCard');
+  const heroPosCard    = document.getElementById('heroPosCard');
+  const heroPair       = document.getElementById('heroPair');
 
   heroCard.innerHTML       = buildHeroHTML(topPitcher, '// PITCHER_OF_THE_DAY', scoringKey, leaderboard);
   heroHitterCard.innerHTML = buildHeroHTML(topHitter,  '// HITTER_OF_THE_DAY',  scoringKey, leaderboard);
@@ -453,6 +464,24 @@ function renderHeroPair(leaderboard, scoringKey) {
   if (topHitter) {
     heroHitterCard.style.cursor = 'pointer';
     heroHitterCard.onclick = () => openModal(topHitter, scoringKey, leaderboard);
+  }
+
+  // Third card: show when a specific position filter is active
+  const showPosCard = !GENERAL_FILTERS.includes(posFilter);
+  if (showPosCard) {
+    const filterFn = POS_FILTER_FN[posFilter] || POS_FILTER_FN.ALL;
+    const topPos   = leaderboard.all.filter(filterFn)[0] || null;
+    const label    = POS_LABELS[posFilter] || `// TOP_${posFilter}`;
+    heroPosCard.innerHTML = buildHeroHTML(topPos, label, scoringKey, leaderboard);
+    heroPosCard.style.display = '';
+    heroPair.classList.add('has-pos-card');
+    if (topPos) {
+      heroPosCard.style.cursor = 'pointer';
+      heroPosCard.onclick = () => openModal(topPos, scoringKey, leaderboard);
+    }
+  } else {
+    heroPosCard.style.display = 'none';
+    heroPair.classList.remove('has-pos-card');
   }
 }
 
@@ -765,7 +794,11 @@ function initPosFilter() {
       document.querySelectorAll('.pos-btn').forEach(b =>
         b.classList.toggle('active', b === btn)
       );
-      if (_leaderboard) renderStatMatrix(_leaderboard, _posFilter, getScoringSystem());
+      if (_leaderboard) {
+        const key = getScoringSystem();
+        renderHeroPair(_leaderboard, _posFilter, key);
+        renderStatMatrix(_leaderboard, _posFilter, key);
+      }
     });
   });
 }
