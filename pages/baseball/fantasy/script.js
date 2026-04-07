@@ -750,8 +750,10 @@ function scoreAllPlayers(players, scoringKey) {
 
   const all = scored.slice().sort((a, b) => b.fantasyScore - a.fantasyScore);
   all.forEach((p, i) => { p.globalRank = i + 1; });
-  const batters = all.filter(p => !p.isPitcher);
+  const batters  = all.filter(p => !p.isPitcher);
   const pitchers = all.filter(p => p.isPitcher);
+  batters.forEach((p, i)  => { p.hitterRank  = i + 1; });
+  pitchers.forEach((p, i) => { p.pitcherRank = i + 1; });
   return { all, batters, pitchers, _rawStats: players };
 }
 
@@ -963,8 +965,11 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
     }).join('');
 
   } else {
+    const rankOf = isPitcherView ? (p) => p.pitcherRank
+                 : isBatterView  ? (p) => p.hitterRank
+                 : (p) => p.globalRank;
     body.innerHTML = sorted.map((p, i) => {
-      const rankStr = '#' + String(p.globalRank).padStart(2, '0');
+      const rankStr = '#' + String(rankOf(p)).padStart(2, '0');
       const ptsBg   = heatPts(ptsPct(p.fantasyScore));
       const { color } = teamMeta(p.teamAbbr);
       const rowStyle = `border-left:3px solid ${hexToRgba(color,0.55)};background:${hexToRgba(color,0.02)};`;
