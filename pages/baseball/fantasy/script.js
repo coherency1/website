@@ -6,6 +6,33 @@
 
 const API = 'https://statsapi.mlb.com/api/v1';
 
+// ── Team colors (primary) & MLB team IDs for logo URLs ────
+const TEAM_COLORS = {
+  ARI:'#A71930', ATL:'#CE1141', BAL:'#DF4601', BOS:'#BD3039',
+  CHC:'#0E3386', CWS:'#C4CED4', CIN:'#C6011F', CLE:'#00385D',
+  COL:'#33006F', DET:'#0C2340', HOU:'#EB6E1F', KC: '#004687',
+  LAA:'#BA0021', LAD:'#005A9C', MIA:'#00A3E0', MIL:'#FFC52F',
+  MIN:'#D31145', NYM:'#FF5910', NYY:'#003087', OAK:'#EFB21E',
+  PHI:'#E81828', PIT:'#FDB827', SD: '#FFC425', SEA:'#005C5C',
+  SF: '#FD5A1E', STL:'#C41E3A', TB: '#8FBCE6', TEX:'#C0111F',
+  TOR:'#134A8E', WSH:'#AB0003',
+};
+
+const TEAM_IDS = {
+  ARI:109, ATL:144, BAL:110, BOS:111, CHC:112,
+  CWS:145, CIN:113, CLE:114, COL:115, DET:116,
+  HOU:117, KC: 118, LAA:108, LAD:119, MIA:146,
+  MIL:158, MIN:142, NYM:121, NYY:147, OAK:133,
+  PHI:143, PIT:134, SD: 135, SEA:136, SF: 137,
+  STL:138, TB: 139, TEX:140, TOR:141, WSH:120,
+};
+
+// Normalize FanGraphs/variant abbreviations → standard
+const TEAM_ABBR_NORM = {
+  WSN:'WSH', WAS:'WSH', CHW:'CWS', ANA:'LAA',
+  SFG:'SF',  SDP:'SD',  KCR:'KC',  TBR:'TB',
+};
+
 const SCORING_SYSTEMS = {
   espn: {
     bat: { TB: 1, R: 1, RBI: 1, BB: 1, SB: 1, K: -1 },
@@ -89,12 +116,15 @@ const HEADSHOT_FALLBACK =
 // ── SECTION 2 — STATE & URL MANAGEMENT ───────────────────
 // ══════════════════════════════════════════════════════════
 
-let _leaderboard = null;  // { all, batters, pitchers, _rawStats }
-let _posFilter   = 'ALL';
-let _sortKey     = 'pts';
-let _sortDir     = 'desc';
-let _modalPlayer = null;
-let _gameLog     = null;
+let _leaderboard      = null;  // { all, batters, pitchers, _rawStats }
+let _posFilter        = 'ALL';
+let _sortKey          = 'pts';
+let _sortDir          = 'desc';
+let _modalPlayer      = null;
+let _gameLog          = null;
+let _refreshInterval  = null;
+let _liveGamePks      = null;
+let _liveDate         = null;
 
 function getScoringSystem() {
   const p = new URLSearchParams(window.location.search).get('scoring');
@@ -125,6 +155,29 @@ function todayStr() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 }
 
+function pstHour() {
+  return parseInt(new Date().toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles', hour: 'numeric', hour12: false
+  }));
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function teamMeta(abbr) {
+  const norm  = TEAM_ABBR_NORM[abbr] || abbr;
+  const color = TEAM_COLORS[norm] || '#4a5568';
+  const id    = TEAM_IDS[norm]    || null;
+  return {
+    color,
+    logoUrl: id ? `https://www.mlbstatic.com/team-logos/${id}.svg` : null,
+  };
+}
+
 function yesterdayStr() {
   const d = new Date();
   d.setDate(d.getDate() - 1);
@@ -149,7 +202,7 @@ function parseInningsPitched(s) {
 function setDashStatus(state, msg) {
   const el = document.getElementById('dashStatus');
   if (!el) return;
-  const labels = { loading: '● LOADING', ready: '● LIVE', prev: '● PREV', proj: '● PROJ', error: '● ERROR', 'no-games': '● OFF DAY' };
+  const labels = { loading: '● LOADING', ready: '● FINAL', prev: '● PREV', live: '● LIVE', proj: '● PROJ', error: '● ERROR', 'no-games': '● OFF DAY' };
   el.textContent = msg || labels[state] || state.toUpperCase();
   el.className = 'dash-status status-' + state;
 }
@@ -315,28 +368,60 @@ function scorePitcher(pit, sys) {
 // ── SECTION 5 — DATA FETCHING ─────────────────────────────
 // ══════════════════════════════════════════════════════════
 
+// Returns { pks: [], hasLive: bool } for Final/Live games on a date
 async function fetchScheduleForDate(dateStr) {
   const data = await apiFetch(`${API}/schedule?sportId=1&date=${dateStr}&gameType=R`);
   const dates = data.dates || [];
-  if (!dates.length) return [];
+  if (!dates.length) return { pks: [], hasLive: false };
   const games = dates[0].games || [];
-  return games
-    .filter(g => g.status.abstractGameState === 'Final' || g.status.abstractGameState === 'Live')
-    .map(g => g.gamePk);
+  const active = games.filter(g =>
+    g.status.abstractGameState === 'Final' || g.status.abstractGameState === 'Live'
+  );
+  const hasLive = active.some(g => g.status.abstractGameState === 'Live');
+  return { pks: active.map(g => g.gamePk), hasLive };
 }
 
-// Returns { gamePks, date, isYesterday }
-// Tries today's Final/Live games first; falls back to yesterday if none found yet.
-async function resolveGameDate() {
-  const today = todayStr();
-  const todayPks = await fetchScheduleForDate(today);
-  if (todayPks.length) return { gamePks: todayPks, date: today, isYesterday: false };
-
+// Resolve what data to show based on time of day (PST):
+//   Before 7am → previous day's completed games
+//   After  7am → today's games if any; otherwise today's projections
+// Returns { gamePks, date, mode: 'prev'|'live'|'final'|'proj' }
+async function resolveDisplayMode() {
+  const today     = todayStr();
   const yesterday = yesterdayStr();
-  const yestPks = await fetchScheduleForDate(yesterday);
-  if (yestPks.length) return { gamePks: yestPks, date: yesterday, isYesterday: true };
 
-  return { gamePks: [], date: today, isYesterday: false };
+  if (pstHour() < 7) {
+    const { pks } = await fetchScheduleForDate(yesterday);
+    if (pks.length) return { gamePks: pks, date: yesterday, mode: 'prev' };
+    return { gamePks: [], date: today, mode: 'proj' };
+  }
+
+  const { pks, hasLive } = await fetchScheduleForDate(today);
+  if (pks.length) return { gamePks: pks, date: today, mode: hasLive ? 'live' : 'final' };
+  return { gamePks: [], date: today, mode: 'proj' };
+}
+
+function startLiveRefresh(gamePks, date) {
+  stopLiveRefresh();
+  _liveGamePks = gamePks;
+  _liveDate    = date;
+  _refreshInterval = setInterval(async () => {
+    try {
+      const { pks, hasLive } = await fetchScheduleForDate(date);
+      if (!pks.length) { stopLiveRefresh(); return; }
+      const scoringKey  = getScoringSystem();
+      const allStats    = await fetchAllBoxscores(pks, date);
+      const leaderboard = buildLeaderboard(allStats, scoringKey);
+      leaderboard._rawStats = allStats;
+      _leaderboard = leaderboard;
+      renderHeroPair(leaderboard, _posFilter, scoringKey);
+      renderStatMatrix(leaderboard, _posFilter, scoringKey);
+      if (!hasLive) { setDashStatus('ready'); stopLiveRefresh(); }
+    } catch (_) {}
+  }, 90 * 1000);
+}
+
+function stopLiveRefresh() {
+  if (_refreshInterval) { clearInterval(_refreshInterval); _refreshInterval = null; }
 }
 
 async function fetchBoxscore(gamePk) {
@@ -686,12 +771,19 @@ function buildHeroHTML(player, label, scoringKey, leaderboard) {
     return `<div class="hero-label">${label}</div>
             <div class="hero-empty"><span>—</span></div>`;
   }
-  const statLine = buildStatLine(player);
+  const statLine    = buildStatLine(player);
   const overallRank = leaderboard.all.indexOf(player) + 1;
-  const rankStr = '#' + String(overallRank).padStart(2, '0');
+  const rankStr     = '#' + String(overallRank).padStart(2, '0');
+  const { color, logoUrl } = teamMeta(player.teamAbbr);
+  const borderStyle = `border-left:3px solid ${hexToRgba(color, 0.7)};`;
+  const bgStyle     = `background:linear-gradient(135deg,${hexToRgba(color,0.06)} 0%,transparent 55%);`;
+  const logoEl      = logoUrl
+    ? `<div class="hero-team-logo" style="background-image:url('${logoUrl}')"></div>`
+    : '';
   return `
     <div class="hero-label">${label}</div>
-    <div class="hero-inner">
+    <div class="hero-inner" style="${borderStyle}${bgStyle}">
+      ${logoEl}
       <img class="hero-photo" src="${player.id ? HEADSHOT(player.id) : HEADSHOT_FALLBACK}" alt="${player.name}"
            onerror="this.src='${HEADSHOT_FALLBACK}'">
       <div class="hero-content">
@@ -857,6 +949,8 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
   body.innerHTML = sorted.map((p, i) => {
     const rankStr = '#' + String(i + 1).padStart(2, '0');
     const ptsBg   = heatPts(ptsPct(p.fantasyScore));
+    const { color } = teamMeta(p.teamAbbr);
+    const rowStyle = `border-left:3px solid ${hexToRgba(color,0.55)};background:${hexToRgba(color,0.02)};`;
 
     const ptsCellHTML = `<td class="td-pts">
       <div class="stat-cell" style="background:${ptsBg}">
@@ -870,7 +964,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
     </td>`;
 
     if (isAllView) {
-      return `<tr class="matrix-row" data-idx="${i}">
+      return `<tr class="matrix-row" data-idx="${i}" style="${rowStyle}">
         <td class="td-rank">${rankStr}</td>
         ${playerCellHTML}
         <td class="td-pos">${p.posAbbr}</td>
@@ -893,7 +987,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
       </td>`;
     }).join('');
 
-    return `<tr class="matrix-row" data-idx="${i}">
+    return `<tr class="matrix-row" data-idx="${i}" style="${rowStyle}">
       <td class="td-rank">${rankStr}</td>
       ${playerCellHTML}
       ${ptsCellHTML}
@@ -1152,6 +1246,7 @@ function initDateLabel(dateStr, isYesterday, isProjected, nextGameDate) {
 }
 
 async function init() {
+  stopLiveRefresh();
   initScoringToggle();
   initPosFilter();
   initModalListeners();
@@ -1161,11 +1256,11 @@ async function init() {
   const scoringKey = getScoringSystem();
 
   try {
-    const { gamePks, date, isYesterday } = await resolveGameDate();
-    initDateLabel(date, isYesterday, false, null);
+    const { gamePks, date, mode } = await resolveDisplayMode();
+    const isYesterday = mode === 'prev';
+    const isProjected = mode === 'proj';
 
-    if (!gamePks.length) {
-      // Try FanGraphs Steamer first, fall back to MLB projectedRos, then off-day
+    if (isProjected) {
       let projPlayers = [];
       try { projPlayers = await fetchFanGraphsProjections(); } catch (_) {}
       if (!projPlayers.length) {
@@ -1188,7 +1283,8 @@ async function init() {
       return;
     }
 
-    const allStats   = await fetchAllBoxscores(gamePks, date);
+    initDateLabel(date, isYesterday, false, null);
+    const allStats    = await fetchAllBoxscores(gamePks, date);
     const leaderboard = buildLeaderboard(allStats, scoringKey);
     leaderboard._rawStats = allStats;
     _leaderboard = leaderboard;
@@ -1199,7 +1295,9 @@ async function init() {
     } else {
       renderHeroPair(leaderboard, scoringKey);
       renderStatMatrix(leaderboard, _posFilter, scoringKey);
-      setDashStatus(isYesterday ? 'prev' : 'ready');
+      const statusKey = mode === 'live' ? 'live' : isYesterday ? 'prev' : 'ready';
+      setDashStatus(statusKey);
+      if (mode === 'live') startLiveRefresh(gamePks, date);
     }
 
   } catch (err) {
