@@ -151,7 +151,32 @@ function setDashStatus(state, msg) {
   el.className = 'dash-status status-' + state;
 }
 
+function buildProjStatLine(p) {
+  if (!p.projSeasonStats) return buildStatLine(p);
+  if (p.isPitcher) {
+    const s = p.projSeasonStats.pit || {};
+    const parts = [];
+    if (s.IP > 0) parts.push(`${s.IP} IP`);
+    if (s.K  > 0) parts.push(`${s.K} K`);
+    if (s.W  > 0) parts.push(`${s.W} W`);
+    if (s.SV > 0) parts.push(`${s.SV} SV`);
+    if (s.HLD > 0) parts.push(`${s.HLD} HLD`);
+    const games = s.GS || s.G || '';
+    return (parts.join(' · ') || '—') + (games ? ` / ${games}${s.GS ? 'GS' : 'G'}` : '');
+  } else {
+    const s = p.projSeasonStats.bat || {};
+    const parts = [];
+    if (s.HR  > 0) parts.push(`${s.HR} HR`);
+    if (s.RBI > 0) parts.push(`${s.RBI} RBI`);
+    if (s.R   > 0) parts.push(`${s.R} R`);
+    if (s.SB  > 0) parts.push(`${s.SB} SB`);
+    if (s.H   > 0 && !parts.length) parts.push(`${s.H} H`);
+    return (parts.join(' · ') || '—') + (s.G ? ` / ${s.G}G` : '');
+  }
+}
+
 function buildStatLine(p) {
+  if (p.isProjected) return buildProjStatLine(p);
   if (p.isPitcher) {
     const parts = [];
     const ip = parseInningsPitched(p.rawStats.pit.inningsPitched);
@@ -392,12 +417,38 @@ async function fetchPlayerGameLog(playerId, group, season) {
   }));
 }
 
+// ── FG position helpers ────────────────────────────────────
 const FG_POS_TO_CODE = {
   'C':'2','1B':'3','2B':'4','3B':'5','SS':'6',
   'LF':'7','CF':'8','RF':'9','OF':'7','DH':'10',
   'SP':'1','RP':'1','P':'1',
 };
 
+// Parse FanGraphs pos string (handles "SS/2B", "LF/CF/RF", etc.)
+function parseFgPos(raw) {
+  if (!raw) return { code: '0', abbr: '?' };
+  const primary = String(raw).toUpperCase().split('/')[0].trim();
+  return { code: FG_POS_TO_CODE[primary] || '0', abbr: primary };
+}
+
+// Resolve MLBAM id from FanGraphs player object (field name varies by endpoint)
+function fgMlbamId(p) {
+  return p.mlbamid || p.MLBAMID || p.xMLBAMID || p.minMajorLeagueId || null;
+}
+
+// ── Next scheduled game date ───────────────────────────────
+async function fetchNextGameDate(fromDate) {
+  const end = new Date(fromDate + 'T12:00:00');
+  end.setDate(end.getDate() + 14);
+  const endStr = end.toLocaleDateString('en-CA');
+  const data = await apiFetch(
+    `${API}/schedule?sportId=1&startDate=${fromDate}&endDate=${endStr}&gameType=R`
+  );
+  const upcoming = (data.dates || []).filter(d => d.games && d.games.length > 0);
+  return upcoming.length ? upcoming[0].date : null;
+}
+
+// ── FanGraphs Steamer projections ─────────────────────────
 async function fetchFanGraphsProjections() {
   const FG = 'https://www.fangraphs.com/api/projections';
   const [batData, pitData] = await Promise.all([
@@ -410,31 +461,39 @@ async function fetchFanGraphsProjections() {
   for (const p of (batData || [])) {
     const g = p.G || p.g || 1;
     if (g < 20 || !p.Name) continue;
-    const posStr = (p.pos || p.Pos || '').toUpperCase();
+    const { code, abbr } = parseFgPos(p.pos || p.Pos || '');
+    const season = {
+      H: Math.round(p.H || 0), '2B': Math.round(p['2B'] || 0),
+      '3B': Math.round(p['3B'] || 0), HR: Math.round(p.HR || 0),
+      R: Math.round(p.R || 0), RBI: Math.round(p.RBI || 0),
+      BB: Math.round(p.BB || 0), SB: Math.round(p.SB || 0),
+      G: Math.round(g),
+    };
     players.push({
-      id: p.mlbamid || p.MLBAMID || null,
+      id: fgMlbamId(p),
       name: p.Name,
       teamAbbr: (p.Team || '—').toUpperCase(),
       teamName: p.Team || '—',
-      posCode: FG_POS_TO_CODE[posStr] || '0',
-      posAbbr: posStr || '?',
+      posCode: code,
+      posAbbr: abbr,
       isPitcher: false,
       isStarter: false,
       isProjected: true,
+      projSeasonStats: { bat: season },
       rawStats: {
         bat: {
-          hits:         (p.H   || 0) / g,
-          doubles:      (p['2B'] || 0) / g,
-          triples:      (p['3B'] || 0) / g,
-          homeRuns:     (p.HR  || 0) / g,
-          runs:         (p.R   || 0) / g,
-          rbi:          (p.RBI || 0) / g,
-          baseOnBalls:  (p.BB  || 0) / g,
-          stolenBases:  (p.SB  || 0) / g,
-          caughtStealing: (p.CS || 0) / g,
-          strikeOuts:   (p.SO  || 0) / g,
-          hitByPitch:   (p.HBP || 0) / g,
-          atBats:       (p.AB  || p.PA || 1) / g,
+          hits:           (p.H     || 0) / g,
+          doubles:        (p['2B'] || 0) / g,
+          triples:        (p['3B'] || 0) / g,
+          homeRuns:       (p.HR    || 0) / g,
+          runs:           (p.R     || 0) / g,
+          rbi:            (p.RBI   || 0) / g,
+          baseOnBalls:    (p.BB    || 0) / g,
+          stolenBases:    (p.SB    || 0) / g,
+          caughtStealing: (p.CS    || 0) / g,
+          strikeOuts:     (p.SO    || 0) / g,
+          hitByPitch:     (p.HBP   || 0) / g,
+          atBats:         (p.AB    || p.PA || 1) / g,
         }
       },
     });
@@ -446,8 +505,14 @@ async function fetchFanGraphsProjections() {
     const isStarter = gs >= 5;
     const div = isStarter ? Math.max(gs, 1) : Math.max(g, 1);
     if (div < 5 || !p.Name) continue;
+    const season = {
+      IP: +(p.IP || 0).toFixed(1), K: Math.round(p.K || p.SO || 0),
+      W: Math.round(p.W || 0), SV: Math.round(p.SV || 0),
+      HLD: Math.round(p.HLD || 0), ER: Math.round(p.ER || 0),
+      GS: Math.round(gs), G: Math.round(g),
+    };
     players.push({
-      id: p.mlbamid || p.MLBAMID || null,
+      id: fgMlbamId(p),
       name: p.Name,
       teamAbbr: (p.Team || '—').toUpperCase(),
       teamName: p.Team || '—',
@@ -456,18 +521,115 @@ async function fetchFanGraphsProjections() {
       isPitcher: true,
       isStarter,
       isProjected: true,
+      projSeasonStats: { pit: season },
       rawStats: {
         pit: {
-          inningsPitched: (p.IP || 0) / div,
-          strikeOuts:     (p.K  || p.SO || 0) / div,
-          earnedRuns:     (p.ER || 0) / div,
-          wins:           (p.W  || 0) / div,
-          losses:         (p.L  || 0) / div,
-          saves:          (p.SV || 0) / div,
+          inningsPitched: (p.IP  || 0) / div,
+          strikeOuts:     (p.K   || p.SO || 0) / div,
+          earnedRuns:     (p.ER  || 0) / div,
+          wins:           (p.W   || 0) / div,
+          losses:         (p.L   || 0) / div,
+          saves:          (p.SV  || 0) / div,
           holds:          (p.HLD || 0) / div,
-          baseOnBalls:    (p.BB || 0) / div,
-          hits:           (p.H  || 0) / div,
-          blownSaves:     (p.BS || 0) / div,
+          baseOnBalls:    (p.BB  || 0) / div,
+          hits:           (p.H   || 0) / div,
+          blownSaves:     (p.BS  || 0) / div,
+        }
+      },
+    });
+  }
+
+  return players;
+}
+
+// ── MLB projected ROS fallback (CORS-safe, uses MLB IDs) ──
+async function fetchMLBProjectedRos() {
+  const yr = new Date().getFullYear();
+  const [hitData, pitData] = await Promise.all([
+    apiFetch(`${API}/stats?stats=projectedRos&sportId=1&group=hitting&season=${yr}&limit=600`),
+    apiFetch(`${API}/stats?stats=projectedRos&sportId=1&group=pitching&season=${yr}&limit=600`),
+  ]);
+
+  const players = [];
+
+  for (const split of ((hitData.stats || [])[0] || {}).splits || []) {
+    const s = split.stat || {};
+    const g = s.gamesPlayed || 1;
+    if (g < 20 || !split.player) continue;
+    const pos = split.position || {};
+    players.push({
+      id: split.player.id,
+      name: split.player.fullName,
+      teamAbbr: (split.team && split.team.abbreviation) || '—',
+      teamName: (split.team && split.team.name) || '—',
+      posCode: pos.code || '0',
+      posAbbr: pos.abbreviation || '?',
+      isPitcher: false,
+      isStarter: false,
+      isProjected: true,
+      projSeasonStats: {
+        bat: {
+          H: s.hits || 0, '2B': s.doubles || 0, '3B': s.triples || 0,
+          HR: s.homeRuns || 0, R: s.runs || 0, RBI: s.rbi || 0,
+          BB: s.baseOnBalls || 0, SB: s.stolenBases || 0, G: g,
+        }
+      },
+      rawStats: {
+        bat: {
+          hits:           (s.hits         || 0) / g,
+          doubles:        (s.doubles      || 0) / g,
+          triples:        (s.triples      || 0) / g,
+          homeRuns:       (s.homeRuns     || 0) / g,
+          runs:           (s.runs         || 0) / g,
+          rbi:            (s.rbi          || 0) / g,
+          baseOnBalls:    (s.baseOnBalls  || 0) / g,
+          stolenBases:    (s.stolenBases  || 0) / g,
+          caughtStealing: (s.caughtStealing || 0) / g,
+          strikeOuts:     (s.strikeOuts   || 0) / g,
+          atBats:         (s.atBats       || 1) / g,
+        }
+      },
+    });
+  }
+
+  for (const split of ((pitData.stats || [])[0] || {}).splits || []) {
+    const s = split.stat || {};
+    const gs = s.gamesStarted || 0;
+    const g  = s.gamesPitched || s.gamesPlayed || 1;
+    const isStarter = gs >= 5;
+    const div = isStarter ? Math.max(gs, 1) : Math.max(g, 1);
+    if (div < 5 || !split.player) continue;
+    const ip = parseInningsPitched(s.inningsPitched);
+    players.push({
+      id: split.player.id,
+      name: split.player.fullName,
+      teamAbbr: (split.team && split.team.abbreviation) || '—',
+      teamName: (split.team && split.team.name) || '—',
+      posCode: '1',
+      posAbbr: isStarter ? 'SP' : 'RP',
+      isPitcher: true,
+      isStarter,
+      isProjected: true,
+      projSeasonStats: {
+        pit: {
+          IP: +(ip).toFixed(1), K: s.strikeOuts || 0,
+          W: s.wins || 0, SV: s.saves || 0,
+          HLD: s.holds || 0, ER: s.earnedRuns || 0,
+          GS: gs, G: g,
+        }
+      },
+      rawStats: {
+        pit: {
+          inningsPitched: ip / div,
+          strikeOuts:     (s.strikeOuts   || 0) / div,
+          earnedRuns:     (s.earnedRuns   || 0) / div,
+          wins:           (s.wins         || 0) / div,
+          losses:         (s.losses       || 0) / div,
+          saves:          (s.saves        || 0) / div,
+          holds:          (s.holds        || 0) / div,
+          baseOnBalls:    (s.baseOnBalls  || 0) / div,
+          hits:           (s.hits         || 0) / div,
+          blownSaves:     (s.blownSaves   || 0) / div,
         }
       },
     });
@@ -527,7 +689,7 @@ function buildHeroHTML(player, label, scoringKey, leaderboard) {
   return `
     <div class="hero-label">${label}</div>
     <div class="hero-inner">
-      <img class="hero-photo" src="${HEADSHOT(player.id)}" alt="${player.name}"
+      <img class="hero-photo" src="${player.id ? HEADSHOT(player.id) : HEADSHOT_FALLBACK}" alt="${player.name}"
            onerror="this.src='${HEADSHOT_FALLBACK}'">
       <div class="hero-content">
         <div class="hero-rank">${rankStr}</div>
@@ -926,10 +1088,19 @@ function initModalListeners() {
   });
 }
 
-function initDateLabel(dateStr, isYesterday, isProjected) {
+function initDateLabel(dateStr, isYesterday, isProjected, nextGameDate) {
   const el = document.getElementById('dashDate');
   if (!el) return;
-  if (isProjected) { el.textContent = 'STEAMER PROJ · PER GAME'; return; }
+  if (isProjected) {
+    let label = 'STEAMER PROJ · PER GAME';
+    if (nextGameDate) {
+      const nd = new Date(nextGameDate + 'T12:00:00');
+      const ndLabel = nd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+      label += ` · NEXT: ${ndLabel}`;
+    }
+    el.textContent = label;
+    return;
+  }
   const d = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
   const label = d.toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric'
@@ -948,24 +1119,26 @@ async function init() {
 
   try {
     const { gamePks, date, isYesterday } = await resolveGameDate();
-    initDateLabel(date, isYesterday, false);
+    initDateLabel(date, isYesterday, false, null);
 
     if (!gamePks.length) {
-      try {
-        const projPlayers = await fetchFanGraphsProjections();
-        if (projPlayers.length) {
-          const leaderboard = buildLeaderboard(projPlayers, scoringKey);
-          leaderboard._rawStats = projPlayers;
-          _leaderboard = leaderboard;
-          initDateLabel(date, false, true);
-          renderHeroPair(leaderboard, scoringKey);
-          renderStatMatrix(leaderboard, _posFilter, scoringKey);
-          setDashStatus('proj');
-        } else {
-          renderNoGames();
-          setDashStatus('no-games');
-        }
-      } catch (_) {
+      // Try FanGraphs Steamer first, fall back to MLB projectedRos, then off-day
+      let projPlayers = [];
+      try { projPlayers = await fetchFanGraphsProjections(); } catch (_) {}
+      if (!projPlayers.length) {
+        try { projPlayers = await fetchMLBProjectedRos(); } catch (_) {}
+      }
+      if (projPlayers.length) {
+        const leaderboard = buildLeaderboard(projPlayers, scoringKey);
+        leaderboard._rawStats = projPlayers;
+        _leaderboard = leaderboard;
+        let nextGameDate = null;
+        try { nextGameDate = await fetchNextGameDate(date); } catch (_) {}
+        initDateLabel(date, false, true, nextGameDate);
+        renderHeroPair(leaderboard, scoringKey);
+        renderStatMatrix(leaderboard, _posFilter, scoringKey);
+        setDashStatus('proj');
+      } else {
         renderNoGames();
         setDashStatus('no-games');
       }
