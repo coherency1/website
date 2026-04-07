@@ -454,10 +454,10 @@ body {
 }
 
 .th-rank   { text-align: left; padding-left: 10px; white-space: nowrap; width: 44px; }
-.th-player { text-align: left; }
+.th-player { text-align: left; padding-left: 2px; }
 .th-pos    { text-align: center; width: 7%; }
-.th-pts    { text-align: center; width: 9%; color: var(--accent); }
-.th-stat   { text-align: center; width: 9%; }
+.th-pts    { text-align: center; width: 9%; padding: 8px 0; color: var(--accent); }
+.th-stat   { text-align: center; width: 9%; padding: 8px 0; }
 .th-stats  { text-align: left; width: 18%; }
 
 .th-sort {
@@ -496,6 +496,7 @@ body {
 
 .td-player {
   text-align: left;
+  padding-left: 2px;
 }
 
 .player-name {
