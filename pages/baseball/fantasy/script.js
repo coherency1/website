@@ -1289,7 +1289,7 @@ async function init() {
         let nextGameDate = null;
         try { nextGameDate = await fetchNextGameDate(date); } catch (_) {}
         initDateLabel(date, false, true, nextGameDate);
-        renderHeroPair(leaderboard, scoringKey);
+        renderHeroPair(leaderboard, _posFilter, scoringKey);
         renderStatMatrix(leaderboard, _posFilter, scoringKey);
         setDashStatus('proj');
       } else {
@@ -1309,7 +1309,7 @@ async function init() {
       renderNoGames();
       setDashStatus('no-games');
     } else {
-      renderHeroPair(leaderboard, scoringKey);
+      renderHeroPair(leaderboard, _posFilter, scoringKey);
       renderStatMatrix(leaderboard, _posFilter, scoringKey);
       const statusKey = mode === 'live' ? 'live' : isYesterday ? 'prev' : 'ready';
       setDashStatus(statusKey);
