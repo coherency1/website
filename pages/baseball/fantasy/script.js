@@ -21,9 +21,6 @@ const SCORING_SYSTEMS = {
   }
 };
 
-const HITTER_SLOTS = ['C', '1B', '2B', '3B', 'SS', 'MI', 'CI', 'OF', 'UTIL'];
-const PITCHER_SLOTS = ['SP', 'SP2', 'RP', 'RP2'];
-
 // MLB API position code → slot eligibility
 // pos.code: '1'=P, '2'=C, '3'=1B, '4'=2B, '5'=3B, '6'=SS, '7'=LF, '8'=CF, '9'=RF, '10'=DH
 const POS_ELIGIBLE = {
@@ -42,6 +39,39 @@ const POS_ELIGIBLE = {
   'RP2':  (p) => !p.isStarter,
 };
 
+// Position filter functions for the filter rail
+const POS_FILTER_FN = {
+  ALL:  () => true,
+  SP:   (p) => p.isPitcher && p.isStarter,
+  RP:   (p) => p.isPitcher && !p.isStarter,
+  C:    (p) => !p.isPitcher && p.posCode === '2',
+  '1B': (p) => !p.isPitcher && p.posCode === '3',
+  '2B': (p) => !p.isPitcher && p.posCode === '4',
+  '3B': (p) => !p.isPitcher && p.posCode === '5',
+  SS:   (p) => !p.isPitcher && p.posCode === '6',
+  OF:   (p) => !p.isPitcher && ['7','8','9'].includes(p.posCode),
+};
+
+// Stat column definitions for heat-mapped table
+const BAT_COLS = [
+  { key: 'H',   label: 'H',   fn: (p) => p.rawStats.bat.hits || 0,          inv: false },
+  { key: '2B',  label: '2B',  fn: (p) => p.rawStats.bat.doubles || 0,       inv: false },
+  { key: 'HR',  label: 'HR',  fn: (p) => p.rawStats.bat.homeRuns || 0,      inv: false },
+  { key: 'R',   label: 'R',   fn: (p) => p.rawStats.bat.runs || 0,          inv: false },
+  { key: 'RBI', label: 'RBI', fn: (p) => p.rawStats.bat.rbi || 0,           inv: false },
+  { key: 'SB',  label: 'SB',  fn: (p) => p.rawStats.bat.stolenBases || 0,   inv: false },
+  { key: 'BB',  label: 'BB',  fn: (p) => p.rawStats.bat.baseOnBalls || 0,   inv: false },
+];
+
+const PIT_COLS = [
+  { key: 'IP',  label: 'IP',  fn: (p) => parseInningsPitched(p.rawStats.pit.inningsPitched), inv: false },
+  { key: 'K',   label: 'K',   fn: (p) => p.rawStats.pit.strikeOuts || 0,    inv: false },
+  { key: 'ER',  label: 'ER',  fn: (p) => p.rawStats.pit.earnedRuns || 0,    inv: true  },
+  { key: 'W',   label: 'W',   fn: (p) => p.rawStats.pit.wins || 0,          inv: false },
+  { key: 'SV',  label: 'SV',  fn: (p) => p.rawStats.pit.saves || 0,         inv: false },
+  { key: 'HLD', label: 'HLD', fn: (p) => p.rawStats.pit.holds || 0,         inv: false },
+];
+
 const HEADSHOT = (id) =>
   `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${id}/headshot/67/current`;
 
@@ -53,9 +83,9 @@ const HEADSHOT_FALLBACK =
 // ══════════════════════════════════════════════════════════
 
 let _leaderboard = null;  // { all, batters, pitchers, _rawStats }
-let _slots = null;
+let _posFilter   = 'ALL';
 let _modalPlayer = null;
-let _gameLog = null;      // cached for open modal
+let _gameLog     = null;
 
 function getScoringSystem() {
   const p = new URLSearchParams(window.location.search).get('scoring');
@@ -66,7 +96,7 @@ function setScoringSystem(key) {
   const url = new URL(window.location.href);
   url.searchParams.set('scoring', key);
   history.replaceState({}, '', url);
-  document.querySelectorAll('.toggle-btn').forEach(b => {
+  document.querySelectorAll('.scoring-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.scoring === key);
   });
   if (_leaderboard) reRender(key);
@@ -74,9 +104,8 @@ function setScoringSystem(key) {
 
 function reRender(scoringKey) {
   _leaderboard = rebuildLeaderboard(_leaderboard._rawStats, scoringKey);
-  _slots = assignPositionSlots(_leaderboard.batters, _leaderboard.pitchers);
-  renderHeroCard(_leaderboard.all[0], scoringKey, _leaderboard);
-  renderPositionGrid(_slots, scoringKey, _leaderboard);
+  renderHeroPair(_leaderboard, scoringKey);
+  renderStatMatrix(_leaderboard, _posFilter, scoringKey);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -85,12 +114,6 @@ function reRender(scoringKey) {
 
 function todayStr() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-}
-
-function dateStr(daysAgo) {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
 }
 
 async function apiFetch(url) {
@@ -111,7 +134,7 @@ function parseInningsPitched(s) {
 function setDashStatus(state, msg) {
   const el = document.getElementById('dashStatus');
   if (!el) return;
-  const labels = { loading: 'LOADING', ready: 'LIVE', error: 'ERROR', 'no-games': 'OFF DAY' };
+  const labels = { loading: '● LOADING', ready: '● LIVE', error: '● ERROR', 'no-games': '● OFF DAY' };
   el.textContent = msg || labels[state] || state.toUpperCase();
   el.className = 'dash-status status-' + state;
 }
@@ -138,6 +161,22 @@ function buildStatLine(p) {
     if (s.hits > 0 && !parts.length) parts.push(`${s.hits} H`);
     return parts.join(' · ') || '—';
   }
+}
+
+// Heat map background: teal (high pct) → purple (low pct)
+function heatBg(pct) {
+  const hue  = 270 - (pct / 100) * 90;
+  const sat  = 20  + (pct / 100) * 40;
+  const lgt  = 12  + (pct / 100) * 9;
+  return `hsl(${hue.toFixed(0)},${sat.toFixed(0)}%,${lgt.toFixed(0)}%)`;
+}
+
+// Percentile rank of val within sorted ascending array
+function pctRank(val, sortedVals, inv) {
+  if (!sortedVals.length) return 50;
+  const rank = sortedVals.filter(v => v <= val).length;
+  const raw = Math.round((rank / sortedVals.length) * 100);
+  return inv ? 100 - raw : raw;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -220,16 +259,6 @@ async function fetchTodaySchedule() {
     .map(g => g.gamePk);
 }
 
-async function fetchScheduleForDate(ds) {
-  const data = await apiFetch(`${API}/schedule?sportId=1&date=${ds}&gameType=R`);
-  const dates = data.dates || [];
-  if (!dates.length) return [];
-  const games = dates[0].games || [];
-  return games
-    .filter(g => g.status.abstractGameState === 'Final')
-    .map(g => ({ gamePk: g.gamePk, date: ds }));
-}
-
 async function fetchBoxscore(gamePk) {
   return apiFetch(`${API}/game/${gamePk}/boxscore`);
 }
@@ -240,7 +269,6 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
     const team = boxscore.teams[side];
     const teamAbbr = team.team.abbreviation;
 
-    // Process batters
     (team.battingOrder || []).forEach(pid => {
       const p = team.players[`ID${pid}`];
       if (!p) return;
@@ -261,8 +289,7 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
       });
     });
 
-    // Process pitchers
-    (team.pitchers || []).forEach((pid, idx) => {
+    (team.pitchers || []).forEach((pid) => {
       const p = team.players[`ID${pid}`];
       if (!p) return;
       const pit = p.stats && p.stats.pitching;
@@ -289,7 +316,6 @@ async function fetchAllBoxscores(gamePks, date) {
   const results = await Promise.all(
     gamePks.map(pk => fetchBoxscore(pk).then(bs => extractPlayersFromBoxscore(bs, pk, date)))
   );
-  // Deduplicate by player id (take first occurrence)
   const seen = new Set();
   const flat = [];
   for (const arr of results) {
@@ -301,31 +327,6 @@ async function fetchAllBoxscores(gamePks, date) {
     }
   }
   return flat;
-}
-
-async function fetchWeekBests(scoringKey) {
-  const allPerformances = [];
-  const days1 = [1,2,3,4].map(i => dateStr(i));
-  const days2 = [5,6,7].map(i => dateStr(i));
-
-  async function processDays(days) {
-    const schedules = await Promise.all(days.map(d => fetchScheduleForDate(d)));
-    for (let i = 0; i < days.length; i++) {
-      const games = schedules[i];
-      if (!games.length) continue;
-      const pks = games.map(g => g.gamePk);
-      const players = await fetchAllBoxscores(pks, days[i]);
-      const scored = scoreAllPlayers(players, scoringKey);
-      allPerformances.push(...scored.all);
-    }
-  }
-
-  await processDays(days1);
-  await processDays(days2);
-
-  return allPerformances
-    .sort((a, b) => b.fantasyScore - a.fantasyScore)
-    .slice(0, 8);
 }
 
 async function fetchPlayerGameLog(playerId, group, season) {
@@ -376,230 +377,227 @@ function buildLeaderboard(players, scoringKey) {
 }
 
 // ══════════════════════════════════════════════════════════
-// ── SECTION 7 — POSITION SLOT ASSIGNMENT ─────────────────
+// ── SECTION 7 — RENDER: HERO PAIR ────────────────────────
 // ══════════════════════════════════════════════════════════
 
-function assignPositionSlots(batters, pitchers) {
-  const slots = new Map();
-  const usedBatterIds = new Set();
-  const usedPitcherIds = new Set();
-
-  HITTER_SLOTS.forEach(slot => {
-    const eligible = batters.filter(p => POS_ELIGIBLE[slot](p) && !usedBatterIds.has(p.id));
-    if (eligible.length) {
-      slots.set(slot, eligible[0]);
-      usedBatterIds.add(eligible[0].id);
-    }
-  });
-
-  PITCHER_SLOTS.forEach(slot => {
-    const eligible = pitchers.filter(p => POS_ELIGIBLE[slot](p) && !usedPitcherIds.has(p.id));
-    if (eligible.length) {
-      slots.set(slot, eligible[0]);
-      usedPitcherIds.add(eligible[0].id);
-    }
-  });
-
-  return slots;
-}
-
-// ══════════════════════════════════════════════════════════
-// ── SECTION 8 — RENDER FUNCTIONS ─────────────────────────
-// ══════════════════════════════════════════════════════════
-
-function renderHeroCard(player, scoringKey, leaderboard) {
-  const card = document.getElementById('heroCard');
+function buildHeroHTML(player, label, scoringKey, leaderboard) {
   if (!player) {
-    card.innerHTML = '<div class="no-player">No data available</div>';
-    return;
+    return `<div class="hero-label">${label}</div>
+            <div class="hero-empty"><span>—</span></div>`;
   }
   const statLine = buildStatLine(player);
   const overallRank = leaderboard.all.indexOf(player) + 1;
-
-  card.innerHTML = `
-    <div class="hero-photo-wrap">
+  const rankStr = '#' + String(overallRank).padStart(2, '0');
+  return `
+    <div class="hero-label">${label}</div>
+    <div class="hero-inner">
       <img class="hero-photo" src="${HEADSHOT(player.id)}" alt="${player.name}"
            onerror="this.src='${HEADSHOT_FALLBACK}'">
-    </div>
-    <div class="hero-content">
-      <div class="hero-meta">
-        <span class="hero-team">${player.teamAbbr}</span>
-        <span class="hero-pos">${player.posAbbr}</span>
-        <span class="hero-rank">#${overallRank} OVERALL</span>
-      </div>
-      <div class="hero-name">${player.name}</div>
-      <div class="hero-pts">${player.fantasyScore.toFixed(1)}</div>
-      <div class="hero-pts-label">FANTASY PTS &middot; ${scoringKey.toUpperCase()}</div>
-      <div class="hero-stat-line">${statLine}</div>
-      <div class="hero-breakdown">
-        ${player.breakdown.slice(0, 4).map(b =>
-          `<span class="breakdown-chip">${b.label}: <strong>${b.pts > 0 ? '+' : ''}${b.pts.toFixed(1)}</strong></span>`
-        ).join('')}
+      <div class="hero-content">
+        <div class="hero-rank">${rankStr}</div>
+        <div class="hero-name">${player.name.toUpperCase()}</div>
+        <div class="hero-meta">${player.teamAbbr} · ${player.posAbbr}</div>
+        <div class="hero-pts">${player.fantasyScore.toFixed(1)}<span class="hero-pts-unit"> PTS</span></div>
+        <div class="hero-statline">${statLine}</div>
       </div>
     </div>
   `;
-  card.onclick = () => openModal(player, scoringKey, leaderboard);
-  card.style.cursor = 'pointer';
 }
 
-function renderWeekStrip(bests, scoringKey) {
-  const strip = document.getElementById('weekStrip');
-  if (!bests.length) {
-    strip.innerHTML = '<div class="no-player">No recent data</div>';
+function renderHeroPair(leaderboard, scoringKey) {
+  const overall   = leaderboard.all[0]     || null;
+  const topHitter = leaderboard.batters[0] || null;
+
+  const heroCard       = document.getElementById('heroCard');
+  const heroHitterCard = document.getElementById('heroHitterCard');
+
+  heroCard.innerHTML       = buildHeroHTML(overall,   '// PLAYER_OF_THE_DAY', scoringKey, leaderboard);
+  heroHitterCard.innerHTML = buildHeroHTML(topHitter, '// TOP_HITTER',        scoringKey, leaderboard);
+
+  if (overall) {
+    heroCard.style.cursor = 'pointer';
+    heroCard.onclick = () => openModal(overall, scoringKey, leaderboard);
+  }
+  if (topHitter) {
+    heroHitterCard.style.cursor = 'pointer';
+    heroHitterCard.onclick = () => openModal(topHitter, scoringKey, leaderboard);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ── SECTION 8 — RENDER: STAT MATRIX ──────────────────────
+// ══════════════════════════════════════════════════════════
+
+function renderStatMatrix(leaderboard, posFilter, scoringKey) {
+  const filterFn = POS_FILTER_FN[posFilter] || POS_FILTER_FN.ALL;
+  const filtered = leaderboard.all.filter(filterFn);
+
+  document.getElementById('matrixCount').textContent =
+    filtered.length ? `${filtered.length} RECORDS` : '';
+
+  const isPitcherView = posFilter === 'SP' || posFilter === 'RP';
+  const isBatterView  = ['C', '1B', '2B', '3B', 'SS', 'OF'].includes(posFilter);
+  const isAllView     = !isPitcherView && !isBatterView;
+  const cols          = isPitcherView ? PIT_COLS : isBatterView ? BAT_COLS : null;
+
+  // Pre-sort stat values for percentile calc
+  const pctFns = {};
+  if (cols) {
+    cols.forEach(col => {
+      const vals = filtered.map(p => col.fn(p)).sort((a, b) => a - b);
+      pctFns[col.key] = (val) => pctRank(val, vals, col.inv);
+    });
+  }
+
+  // PTS percentile
+  const ptsSorted = filtered.map(p => p.fantasyScore).sort((a, b) => a - b);
+  const ptsPct = (val) => pctRank(val, ptsSorted, false);
+
+  // Build thead
+  const head = document.getElementById('matrixHead');
+  if (isAllView) {
+    head.innerHTML = `<tr>
+      <th class="th-rank">RNK</th>
+      <th class="th-player">PLAYER</th>
+      <th class="th-pos">POS</th>
+      <th class="th-pts">PTS</th>
+      <th class="th-stats">STATS</th>
+    </tr>`;
+  } else {
+    const statThs = cols.map(c => `<th class="th-stat">${c.label}</th>`).join('');
+    head.innerHTML = `<tr>
+      <th class="th-rank">RNK</th>
+      <th class="th-player">PLAYER</th>
+      <th class="th-pts">PTS</th>
+      ${statThs}
+    </tr>`;
+  }
+
+  // Build tbody
+  const body = document.getElementById('matrixBody');
+  if (!filtered.length) {
+    const colCount = isAllView ? 5 : 3 + (cols ? cols.length : 0);
+    body.innerHTML = `<tr><td colspan="${colCount}" class="td-empty">NO DATA FOR THIS FILTER</td></tr>`;
     return;
   }
-  strip.innerHTML = bests.map(p => `
-    <div class="week-card" data-id="${p.id}">
-      <div class="week-card-date">${p.date || ''}</div>
-      <div class="week-card-name">${p.name}</div>
-      <div class="week-card-team">${p.teamAbbr}</div>
-      <div class="week-card-pts">${p.fantasyScore.toFixed(1)}</div>
-      <div class="week-card-stat">${buildStatLine(p)}</div>
-    </div>
-  `).join('');
-}
 
-function renderPositionGrid(slots, scoringKey, leaderboard) {
-  const hittersCol = document.getElementById('hittersCol');
-  const pitchersCol = document.getElementById('pitchersCol');
+  body.innerHTML = filtered.map((p, i) => {
+    const rankStr = '#' + String(i + 1).padStart(2, '0');
+    const pct     = ptsPct(p.fantasyScore);
+    const ptsBg   = heatBg(pct);
 
-  const HITTER_DISPLAY = [
-    ['C','1B'],
-    ['2B','3B'],
-    ['SS','MI'],
-    ['CI','OF'],
-    ['UTIL']
-  ];
-  const PITCHER_DISPLAY = [
-    ['SP','SP2'],
-    ['RP','RP2']
-  ];
-
-  function renderCard(slot, player) {
-    const slotLabel = slot.replace('2','').replace('SP','SP').replace('RP','RP');
-    const showPhoto = ['C','1B','SS','OF','SP'].includes(slot);
-    if (!player) {
-      return `<div class="pos-card empty">
-        <div class="pos-badge">${slotLabel}</div>
-        <div class="pos-empty-label">&mdash;</div>
-      </div>`;
-    }
-    const rank = leaderboard ? leaderboard.all.indexOf(player) + 1 : '?';
-    const photoHtml = showPhoto
-      ? `<img class="pos-photo" src="${HEADSHOT(player.id)}" alt="" onerror="this.src='${HEADSHOT_FALLBACK}'">`
-      : '';
-    return `<div class="pos-card${showPhoto ? ' has-photo' : ''}" data-id="${player.id}">
-      <div class="pos-badge">${slotLabel}</div>
-      ${photoHtml}
-      <div class="pos-info">
-        <div class="pos-name">${player.name}</div>
-        <div class="pos-team">${player.teamAbbr} &middot; ${player.posAbbr}</div>
-        <div class="pos-stat">${buildStatLine(player)}</div>
+    const ptsCellHTML = `<td class="td-pts">
+      <div class="stat-cell" style="background:${ptsBg}">
+        <span class="stat-val">${p.fantasyScore.toFixed(1)}</span>
+        <span class="stat-pct">${pct}</span>
       </div>
-      <div class="pos-pts">${player.fantasyScore.toFixed(1)}</div>
-    </div>`;
-  }
+    </td>`;
 
-  hittersCol.innerHTML = '<div class="col-label">HITTERS</div>';
-  HITTER_DISPLAY.forEach(row => {
-    const rowEl = document.createElement('div');
-    rowEl.className = 'pos-row';
-    row.forEach(slot => {
-      const player = slots.get(slot);
-      const cardEl = document.createElement('div');
-      cardEl.className = 'pos-card-wrap';
-      cardEl.innerHTML = renderCard(slot, player);
-      if (player) {
-        cardEl.querySelector('.pos-card').addEventListener('click', () => openModal(player, scoringKey, leaderboard));
-        cardEl.querySelector('.pos-card').style.cursor = 'pointer';
-      }
-      rowEl.appendChild(cardEl);
-    });
-    hittersCol.appendChild(rowEl);
-  });
+    const playerCellHTML = `<td class="td-player">
+      <span class="player-name">${p.name}</span>
+      <span class="player-team">${p.teamAbbr}</span>
+    </td>`;
 
-  pitchersCol.innerHTML = '<div class="col-label">PITCHERS</div>';
-  PITCHER_DISPLAY.forEach(row => {
-    const rowEl = document.createElement('div');
-    rowEl.className = 'pos-row';
-    row.forEach(slot => {
-      const player = slots.get(slot);
-      const cardEl = document.createElement('div');
-      cardEl.className = 'pos-card-wrap';
-      cardEl.innerHTML = renderCard(slot, player);
-      if (player) {
-        cardEl.querySelector('.pos-card').addEventListener('click', () => openModal(player, scoringKey, leaderboard));
-        cardEl.querySelector('.pos-card').style.cursor = 'pointer';
-      }
-      rowEl.appendChild(cardEl);
-    });
-    pitchersCol.appendChild(rowEl);
-  });
-}
+    if (isAllView) {
+      return `<tr class="matrix-row" data-id="${p.id}">
+        <td class="td-rank">${rankStr}</td>
+        ${playerCellHTML}
+        <td class="td-pos">${p.posAbbr}</td>
+        ${ptsCellHTML}
+        <td class="td-statline">${buildStatLine(p)}</td>
+      </tr>`;
+    }
 
-function renderSkeleton() {
-  const hero = document.getElementById('heroCard');
-  hero.innerHTML = `
-    <div class="skeleton-block" style="width:200px;height:240px;flex-shrink:0;border-radius:8px 0 0 8px;"></div>
-    <div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:16px;">
-      <div class="skeleton-block" style="height:16px;width:40%;"></div>
-      <div class="skeleton-block" style="height:32px;width:70%;"></div>
-      <div class="skeleton-block" style="height:52px;width:30%;"></div>
-      <div class="skeleton-block" style="height:14px;width:55%;"></div>
-    </div>
-  `;
+    const statCells = cols.map(col => {
+      const val  = col.fn(p);
+      const cPct = pctFns[col.key](val);
+      const bg   = heatBg(cPct);
+      const disp = col.key === 'IP'
+        ? (val % 1 === 0 ? val : val.toFixed(1))
+        : val;
+      return `<td class="td-stat">
+        <div class="stat-cell" style="background:${bg}">
+          <span class="stat-val">${disp}</span>
+          <span class="stat-pct">${cPct}</span>
+        </div>
+      </td>`;
+    }).join('');
 
-  const strip = document.getElementById('weekStrip');
-  strip.innerHTML = Array(6).fill(0).map(() =>
-    `<div class="week-card skeleton-block" style="flex-shrink:0;width:160px;height:170px;"></div>`
-  ).join('');
+    return `<tr class="matrix-row" data-id="${p.id}">
+      <td class="td-rank">${rankStr}</td>
+      ${playerCellHTML}
+      ${ptsCellHTML}
+      ${statCells}
+    </tr>`;
+  }).join('');
 
-  const hitters = document.getElementById('hittersCol');
-  const pitchers = document.getElementById('pitchersCol');
-  const skCard = () => `<div class="pos-card-wrap"><div class="skeleton-block" style="height:68px;border-radius:8px;"></div></div>`;
-  [hitters, pitchers].forEach(col => {
-    col.innerHTML = '<div class="col-label">&mdash;</div>' +
-      Array(4).fill(0).map(() => `<div class="pos-row">${skCard()}${skCard()}</div>`).join('');
-  });
-}
-
-function renderNoGames() {
-  document.getElementById('heroCard').innerHTML = `
-    <div class="no-games-state">
-      <div class="no-games-label">NO GAMES TODAY</div>
-      <div class="no-games-sub">Check back when the next game is scheduled.</div>
-    </div>
-  `;
-  ['hittersCol','pitchersCol'].forEach(id => {
-    document.getElementById(id).innerHTML = '<div class="col-label">&mdash;</div>';
+  // Wire row click → modal
+  body.querySelectorAll('.matrix-row').forEach(row => {
+    const id = parseInt(row.dataset.id);
+    const player = filtered.find(pp => pp.id === id);
+    if (player) {
+      row.addEventListener('click', () => openModal(player, scoringKey, leaderboard));
+    }
   });
 }
 
 // ══════════════════════════════════════════════════════════
-// ── SECTION 9 — MODAL ────────────────────────────────────
+// ── SECTION 9 — RENDER: SKELETON + EMPTY STATES ──────────
+// ══════════════════════════════════════════════════════════
+
+function renderSkeleton() {
+  const skHero = `
+    <div class="hero-label">// ——</div>
+    <div class="skeleton-block" style="height:140px;border-radius:2px;margin-top:8px;"></div>
+  `;
+  document.getElementById('heroCard').innerHTML       = skHero;
+  document.getElementById('heroHitterCard').innerHTML = skHero;
+
+  const skRow = `<tr>${Array(5).fill(0).map(() =>
+    `<td><div class="skeleton-block" style="height:36px;border-radius:2px;margin:3px 6px;"></div></td>`
+  ).join('')}</tr>`;
+  document.getElementById('matrixBody').innerHTML = Array(10).fill(skRow).join('');
+  document.getElementById('matrixCount').textContent = '';
+}
+
+function renderNoGames() {
+  const noHTML = (label) => `
+    <div class="hero-label">${label}</div>
+    <div class="no-games-state">
+      <div class="no-games-label">NO GAMES TODAY</div>
+    </div>
+  `;
+  document.getElementById('heroCard').innerHTML       = noHTML('// PLAYER_OF_THE_DAY');
+  document.getElementById('heroHitterCard').innerHTML = noHTML('// TOP_HITTER');
+  document.getElementById('matrixBody').innerHTML =
+    `<tr><td colspan="5" class="td-empty">NO GAMES TODAY</td></tr>`;
+  document.getElementById('matrixCount').textContent = '';
+}
+
+// ══════════════════════════════════════════════════════════
+// ── SECTION 10 — MODAL ───────────────────────────────────
 // ══════════════════════════════════════════════════════════
 
 function openModal(player, scoringKey, leaderboard) {
   _modalPlayer = player;
   _gameLog = null;
 
-  const overlay = document.getElementById('modalOverlay');
-  const photo = document.getElementById('modalPhoto');
-  const name = document.getElementById('modalName');
-  const teamPos = document.getElementById('modalTeamPos');
-  const pts = document.getElementById('modalPts');
-  const breakdown = document.getElementById('modalBreakdown');
-  const ranks = document.getElementById('modalRanks');
-  const histBody = document.getElementById('modalHistBody');
+  const overlay    = document.getElementById('modalOverlay');
+  const photo      = document.getElementById('modalPhoto');
+  const name       = document.getElementById('modalName');
+  const teamPos    = document.getElementById('modalTeamPos');
+  const pts        = document.getElementById('modalPts');
+  const breakdown  = document.getElementById('modalBreakdown');
+  const ranks      = document.getElementById('modalRanks');
+  const histBody   = document.getElementById('modalHistBody');
 
   photo.src = HEADSHOT(player.id);
   photo.onerror = () => { photo.src = HEADSHOT_FALLBACK; };
   name.textContent = player.name;
-  teamPos.textContent = `${player.teamAbbr} \u00b7 ${player.posAbbr}`;
+  teamPos.textContent = `${player.teamAbbr} · ${player.posAbbr}`;
   pts.textContent = player.fantasyScore.toFixed(1);
 
-  // Breakdown
-  breakdown.innerHTML = '<div class="breakdown-title">SCORING BREAKDOWN</div>' +
+  breakdown.innerHTML = '<div class="breakdown-title">// SCORING_BREAKDOWN</div>' +
     player.breakdown.map(b => `
       <div class="breakdown-row">
         <span class="breakdown-label">${b.label}</span>
@@ -608,27 +606,23 @@ function openModal(player, scoringKey, leaderboard) {
       </div>
     `).join('');
 
-  // Ranks
   const overallRank = leaderboard.all.indexOf(player) + 1;
-  const posList = player.isPitcher ? leaderboard.pitchers : leaderboard.batters;
-  const posRank = posList.indexOf(player) + 1;
+  const posList     = player.isPitcher ? leaderboard.pitchers : leaderboard.batters;
+  const posRank     = posList.indexOf(player) + 1;
   ranks.innerHTML = `
     <div class="rank-badge">#${overallRank} OVERALL</div>
     <div class="rank-badge">#${posRank} ${player.isPitcher ? 'PITCHERS' : player.posAbbr}</div>
   `;
 
-  // History loading
   histBody.innerHTML = '<div class="hist-loading">Loading history...</div>';
   document.querySelectorAll('.hist-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.window === '7');
   });
 
-  // Open modal
   overlay.setAttribute('aria-hidden', 'false');
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 
-  // Fetch game log
   const group = player.isPitcher ? 'pitching' : 'hitting';
   fetchPlayerGameLog(player.id, group).then(log => {
     _gameLog = log;
@@ -646,7 +640,7 @@ function closeModal() {
     document.body.style.overflow = '';
     _modalPlayer = null;
     _gameLog = null;
-  }, 300);
+  }, 280);
 }
 
 function renderHistoryTab(gameLog, windowDays, scoringKey) {
@@ -658,7 +652,6 @@ function renderHistoryTab(gameLog, windowDays, scoringKey) {
   const player = _modalPlayer;
   if (!player) return;
 
-  // Use last N games (log is chronological, take from end)
   const window = gameLog.slice(-windowDays);
   const sys = SCORING_SYSTEMS[scoringKey];
 
@@ -685,7 +678,7 @@ function renderHistoryTab(gameLog, windowDays, scoringKey) {
     return;
   }
 
-  const avg = scored.reduce((s, g) => s + g.fantasyScore, 0) / scored.length;
+  const avg  = scored.reduce((s, g) => s + g.fantasyScore, 0) / scored.length;
   const peak = scored.reduce((best, g) => g.fantasyScore > best.fantasyScore ? g : best, scored[0]);
 
   histBody.innerHTML = `
@@ -704,8 +697,8 @@ function renderHistoryTab(gameLog, windowDays, scoringKey) {
       </div>
     </div>
     <div class="hist-peak-game">
-      <div class="hist-peak-label">BEST GAME</div>
-      <div class="hist-peak-date">${peak.date} &middot; vs ${peak.opponent}</div>
+      <div class="hist-peak-label">// BEST_GAME</div>
+      <div class="hist-peak-date">${peak.date} · vs ${peak.opponent}</div>
       <div class="hist-peak-stat">${peak.statLine}</div>
     </div>
     <div class="hist-game-log">
@@ -719,6 +712,30 @@ function renderHistoryTab(gameLog, windowDays, scoringKey) {
       `).join('')}
     </div>
   `;
+}
+
+// ══════════════════════════════════════════════════════════
+// ── SECTION 11 — INIT ────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+
+function initScoringToggle() {
+  const key = getScoringSystem();
+  document.querySelectorAll('.scoring-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.scoring === key);
+    btn.addEventListener('click', () => setScoringSystem(btn.dataset.scoring));
+  });
+}
+
+function initPosFilter() {
+  document.querySelectorAll('.pos-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _posFilter = btn.dataset.pos;
+      document.querySelectorAll('.pos-btn').forEach(b =>
+        b.classList.toggle('active', b === btn)
+      );
+      if (_leaderboard) renderStatMatrix(_leaderboard, _posFilter, getScoringSystem());
+    });
+  });
 }
 
 function initModalListeners() {
@@ -738,23 +755,10 @@ function initModalListeners() {
   });
 }
 
-// ══════════════════════════════════════════════════════════
-// ── SECTION 10 — INIT ────────────────────────────────────
-// ══════════════════════════════════════════════════════════
-
-function initScoringToggle() {
-  const key = getScoringSystem();
-  document.querySelectorAll('.toggle-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.scoring === key);
-    btn.addEventListener('click', () => setScoringSystem(btn.dataset.scoring));
-  });
-}
-
 function initDateLabel() {
   const el = document.getElementById('dashDate');
   if (el) {
-    const d = new Date();
-    el.textContent = d.toLocaleDateString('en-US', {
+    el.textContent = new Date().toLocaleDateString('en-US', {
       timeZone: 'America/Los_Angeles',
       month: 'short', day: 'numeric', year: 'numeric'
     }).toUpperCase();
@@ -764,6 +768,7 @@ function initDateLabel() {
 async function init() {
   initDateLabel();
   initScoringToggle();
+  initPosFilter();
   initModalListeners();
   renderSkeleton();
   setDashStatus('loading');
@@ -776,41 +781,31 @@ async function init() {
     if (!gamePks.length) {
       renderNoGames();
       setDashStatus('no-games');
-      // Still try week strip
-      fetchWeekBests(scoringKey)
-        .then(bests => renderWeekStrip(bests, scoringKey))
-        .catch(() => {});
       return;
     }
 
-    const allStats = await fetchAllBoxscores(gamePks, todayStr());
+    const allStats   = await fetchAllBoxscores(gamePks, todayStr());
     const leaderboard = buildLeaderboard(allStats, scoringKey);
     leaderboard._rawStats = allStats;
     _leaderboard = leaderboard;
-
-    const slots = assignPositionSlots(leaderboard.batters, leaderboard.pitchers);
-    _slots = slots;
 
     if (leaderboard.all.length === 0) {
       renderNoGames();
       setDashStatus('no-games');
     } else {
-      renderHeroCard(leaderboard.all[0], scoringKey, leaderboard);
-      renderPositionGrid(slots, scoringKey, leaderboard);
+      renderHeroPair(leaderboard, scoringKey);
+      renderStatMatrix(leaderboard, _posFilter, scoringKey);
       setDashStatus('ready');
     }
 
-    // Week strip — non-blocking
-    fetchWeekBests(scoringKey)
-      .then(bests => renderWeekStrip(bests, scoringKey))
-      .catch(() => {
-        document.getElementById('weekStrip').innerHTML = '<div class="no-player">Week data unavailable.</div>';
-      });
-
   } catch (err) {
     console.error('Fantasy dashboard error:', err);
-    setDashStatus('error', 'ERROR');
-    document.getElementById('heroCard').innerHTML = `<div class="no-games-state"><div class="no-games-label">FAILED TO LOAD</div><div class="no-games-sub">${err.message}</div></div>`;
+    setDashStatus('error', '● ERROR');
+    document.getElementById('heroCard').innerHTML =
+      `<div class="hero-label">// PLAYER_OF_THE_DAY</div>
+       <div class="no-games-state">
+         <div class="no-games-label">FAILED TO LOAD</div>
+       </div>`;
   }
 }
 

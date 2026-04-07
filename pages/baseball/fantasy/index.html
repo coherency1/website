@@ -6,7 +6,7 @@
   <title>Fantasy — Coherency Baseball</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -21,50 +21,52 @@
 
   <main class="fantasy-dashboard">
 
-    <!-- HEADER -->
-    <header class="dash-header">
-      <div class="dash-title">
-        <span class="dash-label">FANTASY</span>
+    <!-- TOP BAR -->
+    <header class="dash-topbar">
+      <div class="dash-title-block">
+        <span class="dash-title-text">FANTASY_MATRIX</span>
         <span class="dash-date" id="dashDate"></span>
       </div>
       <div class="scoring-toggle" role="group" aria-label="Scoring system">
-        <button class="toggle-btn active" data-scoring="espn">ESPN</button>
-        <button class="toggle-btn" data-scoring="yahoo">YAHOO</button>
-        <button class="toggle-btn" data-scoring="fangraphs">FANGRAPHS</button>
+        <button class="scoring-btn active" data-scoring="espn">[ESPN]</button>
+        <button class="scoring-btn" data-scoring="yahoo">[YAHOO]</button>
+        <button class="scoring-btn" data-scoring="fangraphs">[FG]</button>
       </div>
       <div class="dash-status" id="dashStatus">LOADING</div>
     </header>
 
-    <!-- SECTION A: PLAYER OF THE DAY -->
-    <section class="hero-section">
-      <div class="section-eyebrow">PLAYER OF THE DAY</div>
-      <div class="hero-card" id="heroCard">
-        <div class="skeleton-block" style="height:240px;border-radius:10px;"></div>
-      </div>
+    <!-- POSITION FILTER RAIL -->
+    <nav class="pos-filter-rail" aria-label="Position filter">
+      <button class="pos-btn active" data-pos="ALL">ALL</button>
+      <span class="pos-sep">—</span>
+      <button class="pos-btn" data-pos="SP">SP</button>
+      <button class="pos-btn" data-pos="RP">RP</button>
+      <span class="pos-sep">—</span>
+      <button class="pos-btn" data-pos="C">C</button>
+      <button class="pos-btn" data-pos="1B">1B</button>
+      <button class="pos-btn" data-pos="2B">2B</button>
+      <button class="pos-btn" data-pos="3B">3B</button>
+      <button class="pos-btn" data-pos="SS">SS</button>
+      <button class="pos-btn" data-pos="OF">OF</button>
+    </nav>
+
+    <!-- HERO PAIR -->
+    <section class="hero-pair">
+      <div class="hero-slot" id="heroCard"></div>
+      <div class="hero-slot" id="heroHitterCard"></div>
     </section>
 
-    <!-- SECTION B: WEEKLY STRIP -->
-    <section class="week-section">
-      <div class="section-eyebrow">TOP PERFORMANCES THIS WEEK</div>
-      <div class="week-strip-wrap">
-        <div class="week-strip" id="weekStrip">
-          <!-- JS populated -->
-        </div>
+    <!-- STAT MATRIX -->
+    <section class="matrix-section">
+      <div class="matrix-header">
+        <span class="matrix-label">// STAT_MATRIX</span>
+        <span class="matrix-count" id="matrixCount"></span>
       </div>
-    </section>
-
-    <!-- SECTION C: POSITION GRID -->
-    <section class="grid-section">
-      <div class="section-eyebrow">TODAY'S BEST BY POSITION</div>
-      <div class="position-grid">
-        <div class="hitters-col" id="hittersCol">
-          <div class="col-label">HITTERS</div>
-          <!-- JS populated -->
-        </div>
-        <div class="pitchers-col" id="pitchersCol">
-          <div class="col-label">PITCHERS</div>
-          <!-- JS populated -->
-        </div>
+      <div class="matrix-wrap">
+        <table class="stat-matrix" id="statMatrix">
+          <thead id="matrixHead"></thead>
+          <tbody id="matrixBody"></tbody>
+        </table>
       </div>
     </section>
 
@@ -73,7 +75,8 @@
   <!-- MODAL -->
   <div class="modal-overlay" id="modalOverlay" aria-hidden="true" role="dialog">
     <div class="modal-panel" id="modalPanel">
-      <button class="modal-close" id="modalClose" aria-label="Close">&#x2715;</button>
+      <button class="modal-close" id="modalClose" aria-label="Close">[×]</button>
+      <div class="modal-header-label">// PLAYER_DETAIL</div>
       <div class="modal-photo-row">
         <img class="modal-photo" id="modalPhoto" alt="">
         <div class="modal-name-block">
@@ -89,9 +92,9 @@
       <div class="modal-breakdown" id="modalBreakdown"></div>
       <div class="modal-ranks" id="modalRanks"></div>
       <div class="modal-history-tabs" id="modalHistTabs">
-        <button class="hist-tab active" data-window="7">L7</button>
-        <button class="hist-tab" data-window="15">L15</button>
-        <button class="hist-tab" data-window="30">L30</button>
+        <button class="hist-tab active" data-window="7">[L7]</button>
+        <button class="hist-tab" data-window="15">[L15]</button>
+        <button class="hist-tab" data-window="30">[L30]</button>
       </div>
       <div class="modal-history-body" id="modalHistBody">
         <div class="hist-loading">Loading history...</div>
