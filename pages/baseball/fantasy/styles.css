@@ -296,7 +296,7 @@ body {
 
 .hero-photo {
   width: 72px;
-  height: 88px;
+  height: 102px;
   object-fit: cover;
   object-position: top;
   flex-shrink: 0;
@@ -436,6 +436,13 @@ body {
 .th-pts    { min-width: 72px; color: var(--accent); }
 .th-stat   { min-width: 68px; }
 .th-stats  { text-align: left; min-width: 180px; }
+
+.th-sort {
+  cursor: pointer;
+  user-select: none;
+}
+.th-sort:hover { color: var(--text-bright); }
+.th-sort-active { color: var(--accent) !important; }
 
 /* Rows */
 .matrix-row {

@@ -60,13 +60,14 @@ const BATTER_FILTERS = ['HIT', 'C', '1B', '2B', '3B', 'SS', 'IF', 'OF', 'DH'];
 
 // Stat column definitions for heat-mapped table
 const BAT_COLS = [
-  { key: 'H',   label: 'H',   fn: (p) => p.rawStats.bat.hits || 0,          inv: false },
-  { key: '2B',  label: '2B',  fn: (p) => p.rawStats.bat.doubles || 0,       inv: false },
-  { key: 'HR',  label: 'HR',  fn: (p) => p.rawStats.bat.homeRuns || 0,      inv: false },
-  { key: 'R',   label: 'R',   fn: (p) => p.rawStats.bat.runs || 0,          inv: false },
-  { key: 'RBI', label: 'RBI', fn: (p) => p.rawStats.bat.rbi || 0,           inv: false },
-  { key: 'SB',  label: 'SB',  fn: (p) => p.rawStats.bat.stolenBases || 0,   inv: false },
-  { key: 'BB',  label: 'BB',  fn: (p) => p.rawStats.bat.baseOnBalls || 0,   inv: false },
+  { key: 'H',   label: 'H',   fn: (p) => p.rawStats.bat.hits || 0,                                                                            inv: false },
+  { key: 'HR',  label: 'HR',  fn: (p) => p.rawStats.bat.homeRuns || 0,                                                                         inv: false },
+  { key: 'XBH', label: 'XBH', fn: (p) => (p.rawStats.bat.doubles || 0) + (p.rawStats.bat.triples || 0) + (p.rawStats.bat.homeRuns || 0),       inv: false },
+  { key: 'R',   label: 'R',   fn: (p) => p.rawStats.bat.runs || 0,                                                                             inv: false },
+  { key: 'RBI', label: 'RBI', fn: (p) => p.rawStats.bat.rbi || 0,                                                                              inv: false },
+  { key: 'SO',  label: 'SO',  fn: (p) => p.rawStats.bat.strikeOuts || 0,                                                                       inv: true  },
+  { key: 'SB',  label: 'SB',  fn: (p) => p.rawStats.bat.stolenBases || 0,                                                                      inv: false },
+  { key: 'BB',  label: 'BB',  fn: (p) => p.rawStats.bat.baseOnBalls || 0,                                                                      inv: false },
 ];
 
 const PIT_COLS = [
@@ -90,6 +91,8 @@ const HEADSHOT_FALLBACK =
 
 let _leaderboard = null;  // { all, batters, pitchers, _rawStats }
 let _posFilter   = 'ALL';
+let _sortKey     = 'pts';
+let _sortDir     = 'desc';
 let _modalPlayer = null;
 let _gameLog     = null;
 
@@ -703,10 +706,16 @@ function buildHeroHTML(player, label, scoringKey, leaderboard) {
 }
 
 const POS_LABELS = {
-  SP: '// TOP_STARTER', RP: '// TOP_RELIEVER',
-  C:  '// TOP_C',   '1B': '// TOP_1B', '2B': '// TOP_2B',
-  '3B': '// TOP_3B', SS: '// TOP_SS',  IF:  '// TOP_IF',
-  OF: '// TOP_OF',  DH:  '// TOP_DH',
+  SP:   '// TOP_STARTER',
+  RP:   '// TOP_RELIEVER',
+  C:    '// TOP_CATCHER',
+  '1B': '// TOP_FIRST_BASEMAN',
+  '2B': '// TOP_SECOND_BASEMAN',
+  '3B': '// TOP_THIRD_BASEMAN',
+  SS:   '// TOP_SHORTSTOP',
+  IF:   '// TOP_INFIELDER',
+  OF:   '// TOP_OUTFIELDER',
+  DH:   '// TOP_DESIGNATED_HITTER',
 };
 
 const GENERAL_FILTERS = ['ALL', 'HIT'];
@@ -755,6 +764,21 @@ function renderHeroPair(leaderboard, posFilter, scoringKey) {
 // ── SECTION 8 — RENDER: STAT MATRIX ──────────────────────
 // ══════════════════════════════════════════════════════════
 
+function applySort(arr, cols) {
+  const sorted = arr.slice();
+  const mult = _sortDir === 'desc' ? -1 : 1;
+  if (_sortKey === 'rnk' || _sortKey === 'pts') {
+    sorted.sort((a, b) => mult * (a.fantasyScore - b.fantasyScore));
+  } else if (_sortKey === 'player') {
+    sorted.sort((a, b) => mult * a.name.localeCompare(b.name));
+  } else if (cols) {
+    const col = cols.find(c => c.key === _sortKey);
+    if (col) sorted.sort((a, b) => mult * (col.fn(a) - col.fn(b)));
+    else sorted.sort((a, b) => -1 * (a.fantasyScore - b.fantasyScore));
+  }
+  return sorted;
+}
+
 function renderStatMatrix(leaderboard, posFilter, scoringKey) {
   const filterFn = POS_FILTER_FN[posFilter] || POS_FILTER_FN.ALL;
   const filtered = leaderboard.all.filter(filterFn);
@@ -767,7 +791,9 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
   const isAllView     = !isPitcherView && !isBatterView;
   const cols          = isPitcherView ? PIT_COLS : isBatterView ? BAT_COLS : null;
 
-  // Pre-sort stat values for percentile calc
+  const sorted = applySort(filtered, cols);
+
+  // Pre-sort stat values for percentile calc (always use filtered, not sorted)
   const pctFns = {};
   if (cols) {
     cols.forEach(col => {
@@ -776,47 +802,65 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
     });
   }
 
-  // PTS percentile
+  // PTS percentile (heat map only, no digit shown)
   const ptsSorted = filtered.map(p => p.fantasyScore).sort((a, b) => a - b);
   const ptsPct = (val) => pctRank(val, ptsSorted, false);
+
+  // Sort indicator helper
+  const ind = (key) => _sortKey === key ? (_sortDir === 'desc' ? ' ▼' : ' ▲') : '';
+  const thCls = (key) => `class="${_sortKey === key ? 'th-sort-active' : ''}"`;
 
   // Build thead
   const head = document.getElementById('matrixHead');
   if (isAllView) {
     head.innerHTML = `<tr>
-      <th class="th-rank">RNK</th>
-      <th class="th-player">PLAYER</th>
+      <th class="th-rank th-sort" data-sort="rnk" ${thCls('rnk')}>RNK${ind('rnk')}</th>
+      <th class="th-player th-sort" data-sort="player" ${thCls('player')}>PLAYER${ind('player')}</th>
       <th class="th-pos">POS</th>
-      <th class="th-pts">PTS</th>
+      <th class="th-pts th-sort" data-sort="pts" ${thCls('pts')}>PTS${ind('pts')}</th>
       <th class="th-stats">STATS</th>
     </tr>`;
   } else {
-    const statThs = cols.map(c => `<th class="th-stat">${c.label}</th>`).join('');
+    const statThs = cols.map(c =>
+      `<th class="th-stat th-sort" data-sort="${c.key}" ${thCls(c.key)}>${c.label}${ind(c.key)}</th>`
+    ).join('');
     head.innerHTML = `<tr>
-      <th class="th-rank">RNK</th>
-      <th class="th-player">PLAYER</th>
-      <th class="th-pts">PTS</th>
+      <th class="th-rank th-sort" data-sort="rnk" ${thCls('rnk')}>RNK${ind('rnk')}</th>
+      <th class="th-player th-sort" data-sort="player" ${thCls('player')}>PLAYER${ind('player')}</th>
+      <th class="th-pts th-sort" data-sort="pts" ${thCls('pts')}>PTS${ind('pts')}</th>
       ${statThs}
     </tr>`;
   }
 
+  // Wire sort clicks
+  head.querySelectorAll('.th-sort').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sort;
+      if (_sortKey === key) {
+        _sortDir = _sortDir === 'desc' ? 'asc' : 'desc';
+      } else {
+        _sortKey = key;
+        _sortDir = key === 'player' ? 'asc' : 'desc';
+      }
+      renderStatMatrix(leaderboard, posFilter, scoringKey);
+    });
+  });
+
   // Build tbody
   const body = document.getElementById('matrixBody');
-  if (!filtered.length) {
+  if (!sorted.length) {
     const colCount = isAllView ? 5 : 3 + (cols ? cols.length : 0);
     body.innerHTML = `<tr><td colspan="${colCount}" class="td-empty">NO DATA FOR THIS FILTER</td></tr>`;
     return;
   }
 
-  body.innerHTML = filtered.map((p, i) => {
+  body.innerHTML = sorted.map((p, i) => {
     const rankStr = '#' + String(i + 1).padStart(2, '0');
-    const pct     = ptsPct(p.fantasyScore);
-    const ptsBg   = heatPts(pct);
+    const ptsBg   = heatPts(ptsPct(p.fantasyScore));
 
     const ptsCellHTML = `<td class="td-pts">
       <div class="stat-cell" style="background:${ptsBg}">
         <span class="stat-val">${p.fantasyScore.toFixed(1)}</span>
-        <span class="stat-pct">${pct}</span>
       </div>
     </td>`;
 
@@ -826,7 +870,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
     </td>`;
 
     if (isAllView) {
-      return `<tr class="matrix-row" data-id="${p.id}">
+      return `<tr class="matrix-row" data-idx="${i}">
         <td class="td-rank">${rankStr}</td>
         ${playerCellHTML}
         <td class="td-pos">${p.posAbbr}</td>
@@ -850,7 +894,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
       </td>`;
     }).join('');
 
-    return `<tr class="matrix-row" data-id="${p.id}">
+    return `<tr class="matrix-row" data-idx="${i}">
       <td class="td-rank">${rankStr}</td>
       ${playerCellHTML}
       ${ptsCellHTML}
@@ -858,10 +902,10 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
     </tr>`;
   }).join('');
 
-  // Wire row click → modal
+  // Wire row click → modal (use sorted index)
   body.querySelectorAll('.matrix-row').forEach(row => {
-    const id = parseInt(row.dataset.id);
-    const player = filtered.find(pp => pp.id === id);
+    const idx = parseInt(row.dataset.idx);
+    const player = sorted[idx];
     if (player) {
       row.addEventListener('click', () => openModal(player, scoringKey, leaderboard));
     }
