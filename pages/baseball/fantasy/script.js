@@ -233,17 +233,30 @@ function buildProjStatLine(p) {
 
 function buildStatLine(p) {
   if (p.isProjected) return buildProjStatLine(p);
-  if (p.isPitcher) {
-    const parts = [];
+  if (p.isPitcher || (p.isTwoWay && p.rawStats.pit)) {
+    const pitParts = [];
     const ip = parseInningsPitched(p.rawStats.pit.inningsPitched);
-    if (ip > 0) parts.push(`${ip % 1 === 0 ? ip : ip.toFixed(1)} IP`);
-    if (p.rawStats.pit.earnedRuns > 0) parts.push(`${p.rawStats.pit.earnedRuns} ER`);
-    else if (p.rawStats.pit.earnedRuns === 0 && ip > 0) parts.push('0 ER');
-    if (p.rawStats.pit.strikeOuts > 0) parts.push(`${p.rawStats.pit.strikeOuts} K`);
-    if (p.rawStats.pit.wins > 0) parts.push('W');
-    if (p.rawStats.pit.saves > 0) parts.push('SV');
-    if (p.rawStats.pit.holds > 0) parts.push('HLD');
-    return parts.join(' · ') || '—';
+    if (ip > 0) pitParts.push(`${ip % 1 === 0 ? ip : ip.toFixed(1)} IP`);
+    if (p.rawStats.pit.earnedRuns > 0) pitParts.push(`${p.rawStats.pit.earnedRuns} ER`);
+    else if (p.rawStats.pit.earnedRuns === 0 && ip > 0) pitParts.push('0 ER');
+    if (p.rawStats.pit.strikeOuts > 0) pitParts.push(`${p.rawStats.pit.strikeOuts} K`);
+    if (p.rawStats.pit.wins > 0) pitParts.push('W');
+    if (p.rawStats.pit.saves > 0) pitParts.push('SV');
+    if (p.rawStats.pit.holds > 0) pitParts.push('HLD');
+
+    // Two-way: append batting line after a pipe divider
+    if (p.isTwoWay && p.rawStats.bat) {
+      const s = p.rawStats.bat;
+      const batParts = [];
+      if (s.homeRuns > 0) batParts.push(`${s.homeRuns} HR`);
+      if (s.rbi > 0) batParts.push(`${s.rbi} RBI`);
+      if (s.runs > 0) batParts.push(`${s.runs} R`);
+      if (s.stolenBases > 0) batParts.push(`${s.stolenBases} SB`);
+      if (s.hits > 0 && !batParts.length) batParts.push(`${s.hits} H`);
+      if (batParts.length) pitParts.push('| ' + batParts.join(' · '));
+    }
+
+    return pitParts.join(' · ') || '—';
   } else {
     const s = p.rawStats.bat;
     const parts = [];
@@ -430,6 +443,8 @@ async function fetchBoxscore(gamePk) {
 
 function extractPlayersFromBoxscore(boxscore, gamePk, date) {
   const players = [];
+  const byId = {};  // id → index in players[]
+
   ['home', 'away'].forEach(side => {
     const team = boxscore.teams[side];
     const teamAbbr = team.team.abbreviation;
@@ -439,6 +454,15 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
       if (!p) return;
       const bat = p.stats && p.stats.batting;
       if (!bat || bat.atBats === undefined) return;
+
+      if (byId[pid] !== undefined) {
+        // Already registered as pitcher — attach batting stats (two-way)
+        players[byId[pid]].rawStats.bat = bat;
+        players[byId[pid]].isTwoWay = true;
+        return;
+      }
+
+      byId[pid] = players.length;
       players.push({
         id: pid,
         name: p.person.fullName,
@@ -448,17 +472,32 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
         posAbbr: (p.position && p.position.abbreviation) || '?',
         isPitcher: false,
         isStarter: false,
+        isTwoWay: false,
         gamePk,
         date: date || todayStr(),
         rawStats: { bat },
       });
     });
 
-    (team.pitchers || []).forEach((pid) => {
+    (team.pitchers || []).forEach((pid, idx) => {
       const p = team.players[`ID${pid}`];
       if (!p) return;
       const pit = p.stats && p.stats.pitching;
       if (!pit || pit.inningsPitched === undefined) return;
+
+      if (byId[pid] !== undefined) {
+        // Already registered as batter — upgrade to pitcher (two-way)
+        const existing = players[byId[pid]];
+        existing.rawStats.pit   = pit;
+        existing.isPitcher      = true;
+        existing.posCode        = '1';
+        existing.posAbbr        = (p.position && p.position.abbreviation) || 'P';
+        existing.isStarter      = (typeof pit.gamesStarted === 'number' ? pit.gamesStarted > 0 : idx === 0);
+        existing.isTwoWay       = true;
+        return;
+      }
+
+      byId[pid] = players.length;
       players.push({
         id: pid,
         name: p.person.fullName,
@@ -468,6 +507,7 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
         posAbbr: (p.position && p.position.abbreviation) || 'P',
         isPitcher: true,
         isStarter: (typeof pit.gamesStarted === 'number' ? pit.gamesStarted > 0 : idx === 0),
+        isTwoWay: false,
         gamePk,
         date: date || todayStr(),
         rawStats: { pit },
@@ -475,6 +515,37 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
     });
   });
   return players;
+}
+
+async function enrichPrimaryPositions(players) {
+  // Batch-fetch canonical primary position from MLB API for all non-pitchers.
+  // This corrects game-day positional assignments (e.g. Gunnar Henderson playing DH
+  // but his primary position is SS, which is his fantasy-eligible slot).
+  const hitterIds = players.filter(p => !p.isPitcher).map(p => p.id);
+  if (!hitterIds.length) return;
+  try {
+    const data = await apiFetch(
+      `${API}/people?personIds=${hitterIds.join(',')}&fields=people,id,primaryPosition`
+    );
+    const map = {};
+    (data.people || []).forEach(person => {
+      // Only override if primary position is a field position (not pitcher code '1')
+      if (person.primaryPosition && person.primaryPosition.code !== '1') {
+        map[person.id] = {
+          code: person.primaryPosition.code,
+          abbr: person.primaryPosition.abbreviation,
+        };
+      }
+    });
+    players.forEach(p => {
+      if (!p.isPitcher && map[p.id]) {
+        p.posCode = map[p.id].code;
+        p.posAbbr = map[p.id].abbr;
+      }
+    });
+  } catch (e) {
+    console.warn('primaryPosition enrichment failed', e);
+  }
 }
 
 async function fetchAllBoxscores(gamePks, date) {
@@ -491,6 +562,7 @@ async function fetchAllBoxscores(gamePks, date) {
       }
     }
   }
+  await enrichPrimaryPositions(flat);
   return flat;
 }
 
@@ -734,7 +806,13 @@ function scoreAllPlayers(players, scoringKey) {
   const sys = SCORING_SYSTEMS[scoringKey];
   const scored = players.map(p => {
     let result;
-    if (p.isPitcher) {
+    if (p.isTwoWay && p.rawStats.bat && p.rawStats.pit) {
+      // Two-way player: score both sides, but take the higher value only.
+      // He can only occupy one lineup slot (SP or DH), so scores are not additive.
+      const pitResult = scorePitcher(p.rawStats.pit, sys);
+      const batResult = scoreBatter(p.rawStats.bat, sys);
+      result = pitResult.total >= batResult.total ? pitResult : batResult;
+    } else if (p.isPitcher) {
       result = scorePitcher(p.rawStats.pit, sys);
     } else {
       result = scoreBatter(p.rawStats.bat, sys);

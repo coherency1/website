@@ -531,7 +531,7 @@ body {
 .td-statline {
   text-align: left;
   font-size: 11px;
-  color: var(--text-muted);
+  color: #ffffff;
   padding-left: 12px;
   letter-spacing: 0.03em;
 }
