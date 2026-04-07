@@ -71,7 +71,6 @@ const VISIBLE_ROWS = 9;
 // ══════════════════════════════════════════════════════════
 
 (function initHub() {
-    const $centerDefault = document.getElementById('centerDefault');
     const $centerInfoCard = document.getElementById('centerInfoCard');
     const $infoNum = document.getElementById('infoNum');
     const $infoName = document.getElementById('infoName');
@@ -79,14 +78,6 @@ const VISIBLE_ROWS = 9;
     const $infoStats = document.getElementById('infoStats');
     const $infoDesc = document.getElementById('infoDesc');
     const $infoLink = document.getElementById('infoLink');
-
-    // Hub stats
-    const allItems = [...HUB_ITEMS.games, ...HUB_ITEMS.apps];
-    const readyCount = allItems.filter(i => i.status === 'ACTIVE' || i.status === 'BUILT').length;
-    document.getElementById('statGames').textContent = HUB_ITEMS.games.filter(i => i.status !== 'PLANNED' || i.name !== 'TBD').length;
-    document.getElementById('statApps').textContent = HUB_ITEMS.apps.filter(i => i.status !== 'PLANNED' || i.name !== 'TBD').length;
-    document.getElementById('statLive').textContent = HUB_ITEMS.apps.filter(i => i.type === 'LIVE').length;
-    document.getElementById('statSoon').textContent = allItems.filter(i => i.status === 'PLANNED' && i.name !== 'TBD').length;
 
     let selectedRow = null;
     let selectedItem = null;
@@ -175,8 +166,8 @@ const VISIBLE_ROWS = 9;
             selectedRow.classList.remove('selected');
             selectedRow = null;
             selectedItem = null;
-            $centerDefault.style.display = '';
             $centerInfoCard.style.display = 'none';
+            if (typeof GAME.showGS === 'function') GAME.showGS();
             return;
         }
 
@@ -185,7 +176,6 @@ const VISIBLE_ROWS = 9;
         selectedRow = row;
         selectedItem = item;
 
-        $centerDefault.style.display = 'none';
         $centerInfoCard.style.display = '';
 
         $infoNum.textContent = '#' + item.num;
@@ -449,8 +439,8 @@ const VISIBLE_ROWS = 9;
     // ── State renderers ──
     function renderPreGame(game) {
         renderStatus('PRE_GAME', formatTime(game.gameDate));
-        const awayAbbr = game.teams?.away?.team?.abbreviation || 'AWAY';
-        const homeAbbr = game.teams?.home?.team?.abbreviation || 'HOME';
+        const awayAbbr = game.teams?.away?.abbreviation || game.teams?.away?.team?.abbreviation || 'AWAY';
+        const homeAbbr = game.teams?.home?.abbreviation || game.teams?.home?.team?.abbreviation || 'HOME';
         $awayName.textContent = awayAbbr;
         $homeName.textContent = homeAbbr;
         applyTeamColors(awayAbbr, homeAbbr);
@@ -564,12 +554,11 @@ const VISIBLE_ROWS = 9;
 
 (function initGameState() {
     const $scoreboard = document.getElementById('liveScoreboard');
-    const $centerDefault = document.getElementById('centerDefault');
     const $centerInfoCard = document.getElementById('centerInfoCard');
     const $gs = document.getElementById('centerGameState');
     const $gsBody = document.getElementById('gsBody');
-    let isOpen = false;
-    let prevPanel = 'default'; // 'default' | 'infocard'
+    let isOpen = true;
+    let prevPanel = 'gamestate'; // 'gamestate' | 'infocard'
 
     function abbr(name) {
         if (!name) return '---';
@@ -589,32 +578,35 @@ const VISIBLE_ROWS = 9;
     }
 
     function show() {
-        if (!GAME.feed) return;
         isOpen = true;
-        prevPanel = $centerInfoCard.style.display !== 'none' ? 'infocard' : 'default';
-        $centerDefault.style.display = 'none';
+        prevPanel = $centerInfoCard.style.display !== 'none' ? 'infocard' : 'gamestate';
         $centerInfoCard.style.display = 'none';
         $gs.style.display = '';
         render();
     }
 
     function hide() {
-        isOpen = false;
-        $gs.style.display = 'none';
         if (prevPanel === 'infocard') {
+            isOpen = false;
+            $gs.style.display = 'none';
             $centerInfoCard.style.display = '';
-            $centerDefault.style.display = 'none';
-        } else {
-            $centerDefault.style.display = '';
-            $centerInfoCard.style.display = 'none';
         }
+        // if prevPanel was gamestate, GS is the default — don't hide
     }
 
-    // Silently close GS without restoring — used when selectItem fires while GS is open
+    // Silently close GS and hand off to infocard — used when selectItem fires while GS is open
     GAME.hideGS = function() {
         if (!isOpen) return;
         isOpen = false;
         $gs.style.display = 'none';
+    };
+
+    // Restore GS as default view — used when selectItem deselects
+    GAME.showGS = function() {
+        isOpen = true;
+        $centerInfoCard.style.display = 'none';
+        $gs.style.display = '';
+        render();
     };
 
     $scoreboard.addEventListener('click', (e) => {
@@ -628,6 +620,9 @@ const VISIBLE_ROWS = 9;
     });
 
     GAME.onUpdate = () => { if (isOpen) render(); };
+
+    // Initial render once feed arrives
+    if (GAME.feed) render();
 
     function render() {
         const feed = GAME.feed;
