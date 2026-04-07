@@ -453,11 +453,11 @@ body {
   white-space: nowrap;
 }
 
-.th-rank   { text-align: left; padding-left: 16px; min-width: 52px; }
-.th-player { text-align: left; min-width: 160px; }
-.th-pos    { min-width: 48px; }
-.th-pts    { min-width: 72px; color: var(--accent); }
-.th-stat   { min-width: 68px; }
+.th-rank   { text-align: left; padding-left: 16px; width: 52px; }
+.th-player { text-align: left; min-width: 140px; }
+.th-pos    { width: 48px; text-align: center; }
+.th-pts    { width: 68px; text-align: center; color: var(--accent); }
+.th-stat   { width: 68px; text-align: center; }
 .th-stats  { text-align: left; min-width: 180px; }
 
 .th-sort {
@@ -522,7 +522,9 @@ body {
 }
 
 .td-pts, .td-stat {
-  padding: 4px 6px;
+  padding: 4px 4px;
+  text-align: center;
+  width: 68px;
 }
 
 .td-statline {
@@ -537,10 +539,11 @@ body {
 .stat-cell {
   display: inline-flex;
   flex-direction: column;
-  align-items: flex-end;
-  padding: 5px 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 0;
   border-radius: 2px;
-  min-width: 52px;
+  width: 60px;
   transition: filter 200ms;
 }
 
