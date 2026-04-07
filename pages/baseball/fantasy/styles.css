@@ -459,6 +459,7 @@ body {
 .th-pts    { text-align: center; width: 9%; padding: 8px 0; color: var(--accent); }
 .th-stat   { text-align: center; width: 9%; padding: 8px 0; }
 .th-stats  { text-align: left; width: 18%; }
+.th-statline { text-align: left; padding-left: 12px; color: var(--text-muted); }
 
 .th-sort {
   cursor: pointer;

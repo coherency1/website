@@ -911,6 +911,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
       <th class="th-player th-sort" data-sort="player" ${thCls('player')}>PLAYER${ind('player')}</th>
       <th class="th-pos">POS</th>
       <th class="th-pts th-sort" data-sort="pts" ${thCls('pts')}>PTS${ind('pts')}</th>
+      <th class="th-statline">STATLINE</th>
     </tr>`;
   } else {
     const statThs = cols.map(c =>
@@ -941,7 +942,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
   // Build tbody
   const body = document.getElementById('matrixBody');
   if (!sorted.length) {
-    const colCount = isAllView ? 4 : 3 + (cols ? cols.length : 0);
+    const colCount = isAllView ? 5 : 3 + (cols ? cols.length : 0);
     body.innerHTML = `<tr><td colspan="${colCount}" class="td-empty">NO DATA FOR THIS FILTER</td></tr>`;
     return;
   }
@@ -957,6 +958,7 @@ function renderStatMatrix(leaderboard, posFilter, scoringKey) {
         <td class="td-player"><span class="player-name">${p.name}</span><span class="player-team">${p.teamAbbr}</span></td>
         <td class="td-pos">${p.posAbbr}</td>
         <td class="td-pts"><div class="stat-cell" style="background:${ptsBg}"><span class="stat-val">${p.fantasyScore.toFixed(1)}</span></div></td>
+        <td class="td-statline">${buildStatLine(p)}</td>
       </tr>`;
     }).join('');
 
