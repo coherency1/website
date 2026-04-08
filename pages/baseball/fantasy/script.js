@@ -48,6 +48,12 @@ const SCORING_SYSTEMS = {
   }
 };
 
+// MLB API position code → display abbreviation
+const MLB_POS_ABBR = {
+  '1': 'P', '2': 'C', '3': '1B', '4': '2B', '5': '3B',
+  '6': 'SS', '7': 'LF', '8': 'CF', '9': 'RF', '10': 'DH',
+};
+
 // MLB API position code → slot eligibility
 // pos.code: '1'=P, '2'=C, '3'=1B, '4'=2B, '5'=3B, '6'=SS, '7'=LF, '8'=CF, '9'=RF, '10'=DH
 const POS_ELIGIBLE = {
@@ -464,6 +470,8 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
         // Already registered as pitcher — attach batting stats (two-way)
         players[byId[pid]].rawStats.bat = bat;
         players[byId[pid]].isTwoWay = true;
+        // Save game-day batting posCode so the DH entry uses the real slot
+        players[byId[pid]]._batPosCode = (p.position && p.position.code) || '10';
         return;
       }
 
@@ -495,6 +503,7 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
       if (byId[pid] !== undefined) {
         // Already registered as batter — upgrade to pitcher (two-way)
         const existing = players[byId[pid]];
+        existing._batPosCode    = existing.posCode;  // preserve game-day batting slot
         existing.rawStats.pit   = pit;
         existing.isPitcher      = true;
         existing.posCode        = '1';
@@ -821,9 +830,11 @@ function scoreAllPlayers(players, scoringKey) {
         fantasyScore: pitResult.total, breakdown: pitResult.breakdown,
         posAbbr: 'SP', isPitcher: true, isStarter: true, isTwoWay: false,
       });
+      const batPosCode = p._batPosCode || '10';
       const dhEntry = Object.assign({}, p, {
         fantasyScore: batResult.total, breakdown: batResult.breakdown,
-        posAbbr: 'DH', posCode: '10', isPitcher: false, isTwoWay: false,
+        posCode: batPosCode, posAbbr: MLB_POS_ABBR[batPosCode] || 'DH',
+        isPitcher: false, isTwoWay: false,
       });
       return [spEntry, dhEntry];
     } else if (p.isPitcher) {
@@ -837,7 +848,11 @@ function scoreAllPlayers(players, scoringKey) {
     if (p.isPitcher) {
       return p.rawStats.pit && p.rawStats.pit.inningsPitched !== undefined;
     } else {
-      return p.fantasyScore !== 0 || ((p.rawStats.bat && p.rawStats.bat.atBats) || 0) > 0;
+      const bat = p.rawStats.bat;
+      // Include if they scored fantasy pts, had at-bats, or had any plate appearance
+      return p.fantasyScore !== 0
+        || (bat && (bat.atBats || 0) > 0)
+        || (bat && (bat.plateAppearances || 0) > 0);
     }
   });
 
