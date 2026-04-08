@@ -502,14 +502,16 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
       const pit = p.stats && p.stats.pitching;
       if (!pit || pit.inningsPitched === undefined) return;
 
+      const isStarter = (typeof pit.gamesStarted === 'number' ? pit.gamesStarted > 0 : idx === 0);
+
       if (byId[pid] !== undefined) {
         // Already registered as batter — upgrade to pitcher (two-way)
         const existing = players[byId[pid]];
         existing.rawStats.pit   = pit;
         existing.isPitcher      = true;
         existing.posCode        = '1';
-        existing.posAbbr        = (p.position && p.position.abbreviation) || 'P';
-        existing.isStarter      = (typeof pit.gamesStarted === 'number' ? pit.gamesStarted > 0 : idx === 0);
+        existing.posAbbr        = isStarter ? 'SP' : 'RP';
+        existing.isStarter      = isStarter;
         existing.isTwoWay       = true;
         return;
       }
@@ -521,9 +523,9 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
         teamAbbr,
         teamName: team.team.name,
         posCode: '1',
-        posAbbr: (p.position && p.position.abbreviation) || 'P',
+        posAbbr: isStarter ? 'SP' : 'RP',
         isPitcher: true,
-        isStarter: (typeof pit.gamesStarted === 'number' ? pit.gamesStarted > 0 : idx === 0),
+        isStarter,
         isTwoWay: false,
         gamePk,
         date: date || todayStr(),
