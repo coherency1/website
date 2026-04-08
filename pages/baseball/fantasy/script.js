@@ -195,8 +195,12 @@ function parseInningsPitched(s) {
   const str = String(s);
   const parts = str.split('.');
   const whole = parseInt(parts[0]) || 0;
-  const outs = parseInt(parts[1]) || 0;
-  return whole + outs / 3;
+  const frac = parts[1] || '';
+  if (!frac || frac === '0') return whole;
+  if (frac === '1') return whole + 1 / 3;
+  if (frac === '2') return whole + 2 / 3;
+  // Already a real decimal (e.g. per-game average stored from a previous conversion)
+  return parseFloat(str);
 }
 
 function setDashStatus(state, msg) {
@@ -212,7 +216,7 @@ function buildProjStatLine(p) {
   if (p.isPitcher) {
     const s = p.projSeasonStats.pit || {};
     const parts = [];
-    if (s.IP > 0) parts.push(`${s.IP} IP`);
+    if (s.IP > 0) parts.push(`${displayIP(s.IP)} IP`);
     if (s.K  > 0) parts.push(`${s.K} K`);
     if (s.W  > 0) parts.push(`${s.W} W`);
     if (s.SV > 0) parts.push(`${s.SV} SV`);
@@ -286,13 +290,25 @@ function heatPts(pct) {
 }
 
 // Display innings pitched in MLB .1/.2 notation (6.1 = 6⅓, 6.2 = 6⅔)
+// Handles both raw baseball notation strings ("4.2") and real decimal values (4.667)
 function displayIP(raw) {
   if (raw === null || raw === undefined || raw === '') return '0';
   const str = String(raw);
-  if (!str.includes('.')) return str || '0';
-  const [whole, frac] = str.split('.');
+  const dotIdx = str.indexOf('.');
+  if (dotIdx === -1) return str || '0';
+  const frac = str.slice(dotIdx + 1);
+  const whole = str.slice(0, dotIdx);
   if (!frac || frac === '0') return whole || '0';
-  return `${whole}.${frac}`;
+  // Already valid baseball notation
+  if (frac === '1') return `${whole}.1`;
+  if (frac === '2') return `${whole}.2`;
+  // Real decimal — convert to .1/.2 out notation
+  const decimal = parseFloat(str);
+  const w = Math.floor(decimal);
+  const outs = Math.round((decimal - w) * 3);
+  if (outs <= 0) return `${w}`;
+  if (outs >= 3) return `${w + 1}`;
+  return `${w}.${outs}`;
 }
 
 // Percentile rank of val within sorted ascending array
@@ -363,7 +379,7 @@ function scorePitcher(pit, sys) {
   if (ip > 0) {
     const pts = ip * s.IP;
     total += pts;
-    breakdown.push({ label: 'Innings Pitched', count: ip.toFixed(2), rate: s.IP, pts: Math.round(pts * 10) / 10 });
+    breakdown.push({ label: 'Innings Pitched', count: displayIP(pit.inningsPitched), rate: s.IP, pts: Math.round(pts * 10) / 10 });
   }
   add('Strikeouts', pit.strikeOuts || 0, s.K);
   add('Walks Issued', pit.baseOnBalls || 0, s.BB);
