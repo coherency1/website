@@ -467,7 +467,8 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
       const p = team.players[`ID${pid}`];
       if (!p) return;
       const bat = p.stats && p.stats.batting;
-      if (!bat || bat.atBats === undefined) return;
+      if (!bat || (bat.plateAppearances === undefined && bat.atBats === undefined)) return;
+      if ((bat.plateAppearances || 0) < 1 && (bat.atBats || 0) < 1) return;
 
       if (byId[pid] !== undefined) {
         // Already registered as pitcher — attach batting stats (two-way)
