@@ -54,38 +54,41 @@ const MLB_POS_ABBR = {
   '6': 'SS', '7': 'LF', '8': 'CF', '9': 'RF', '10': 'DH',
 };
 
-// MLB API position code → slot eligibility
-// pos.code: '1'=P, '2'=C, '3'=1B, '4'=2B, '5'=3B, '6'=SS, '7'=LF, '8'=CF, '9'=RF, '10'=DH
-const POS_ELIGIBLE = {
-  'C':    (p) => p.posCode === '2',
-  '1B':   (p) => p.posCode === '3',
-  '2B':   (p) => p.posCode === '4',
-  '3B':   (p) => p.posCode === '5',
-  'SS':   (p) => p.posCode === '6',
-  'MI':   (p) => p.posCode === '4' || p.posCode === '6',
-  'CI':   (p) => p.posCode === '3' || p.posCode === '5',
-  'OF':   (p) => ['7','8','9'].includes(p.posCode),
-  'UTIL': (p) => p.posCode !== '1',
-  'SP':   (p) => p.isStarter,
-  'SP2':  (p) => p.isStarter,
-  'RP':   (p) => !p.isStarter,
-  'RP2':  (p) => !p.isStarter,
+// ESPN 2025 fantasy eligibility overrides (MLB player ID → eligible fantasy positions).
+// Only needed for multi-position eligible players or players whose game-day position
+// differs from their fantasy-eligible slot (e.g. Henderson DHing but only SS-eligible).
+// To find a player's MLB ID: mlb.com/player/<name>/<id> or check the API response.
+// LF/CF/RF are all normalized to 'OF'. SP/RP handled separately for TWP players.
+const ELIGIBILITY_OVERRIDES = {
+  608566: ['3B', 'DH'],   // José Ramírez
+  683002: ['SS'],          // Gunnar Henderson (SS eligible despite DHing)
+  660271: ['OF', 'DH'],   // Shohei Ohtani batting side (SP handled by TWP split)
+  646240: ['3B', 'DH'],   // Rafael Devers
+  665489: ['1B', 'DH'],   // Vladimir Guerrero Jr
+  670541: ['OF', 'DH'],   // Yordan Alvarez
 };
 
-// Position filter functions for the filter rail
+// Normalize LF/CF/RF → OF; pass everything else through
+function normalizeEligiblePos(abbr) {
+  if (!abbr || abbr === '?' || abbr === 'P') return null;
+  if (['LF', 'CF', 'RF'].includes(abbr)) return 'OF';
+  return abbr;
+}
+
+// Position filter functions — driven by p.eligiblePositions[]
 const POS_FILTER_FN = {
   ALL:  () => true,
   HIT:  (p) => !p.isPitcher,
-  SP:   (p) => p.isPitcher && p.isStarter,
-  RP:   (p) => p.isPitcher && !p.isStarter,
-  C:    (p) => !p.isPitcher && p.posCode === '2',
-  '1B': (p) => !p.isPitcher && p.posCode === '3',
-  '2B': (p) => !p.isPitcher && p.posCode === '4',
-  '3B': (p) => !p.isPitcher && p.posCode === '5',
-  SS:   (p) => !p.isPitcher && p.posCode === '6',
-  IF:   (p) => !p.isPitcher && ['3','4','5','6'].includes(p.posCode),
-  OF:   (p) => !p.isPitcher && ['7','8','9'].includes(p.posCode),
-  DH:   (p) => !p.isPitcher && p.posCode === '10',
+  SP:   (p) => (p.eligiblePositions || []).includes('SP'),
+  RP:   (p) => (p.eligiblePositions || []).includes('RP'),
+  C:    (p) => !p.isPitcher && (p.eligiblePositions || []).includes('C'),
+  '1B': (p) => !p.isPitcher && (p.eligiblePositions || []).includes('1B'),
+  '2B': (p) => !p.isPitcher && (p.eligiblePositions || []).includes('2B'),
+  '3B': (p) => !p.isPitcher && (p.eligiblePositions || []).includes('3B'),
+  SS:   (p) => !p.isPitcher && (p.eligiblePositions || []).includes('SS'),
+  IF:   (p) => !p.isPitcher && (p.eligiblePositions || []).some(pos => ['1B','2B','3B','SS'].includes(pos)),
+  OF:   (p) => !p.isPitcher && (p.eligiblePositions || []).includes('OF'),
+  DH:   (p) => !p.isPitcher && (p.eligiblePositions || []).includes('DH'),
 };
 
 // Filters that show batters and use BAT_COLS
@@ -483,6 +486,7 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
         teamName: team.team.name,
         posCode: (p.position && p.position.code) || '0',
         posAbbr: (p.position && p.position.abbreviation) || '?',
+        eligiblePositions: [],
         isPitcher: false,
         isStarter: false,
         isTwoWay: false,
@@ -521,6 +525,7 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
         teamName: team.team.name,
         posCode: '1',
         posAbbr: isStarter ? 'SP' : 'RP',
+        eligiblePositions: [],
         isPitcher: true,
         isStarter,
         isTwoWay: false,
@@ -556,13 +561,34 @@ async function enrichPrimaryPositions(players) {
     });
     players.forEach(p => {
       if (!p.isPitcher && map[p.id]) {
-        p.posCode = map[p.id].code  || p.posCode;
-        p.posAbbr = map[p.id].abbr  || p.posAbbr;
+        p.posCode = map[p.id].code || p.posCode;
+        p.posAbbr = map[p.id].abbr || p.posAbbr;
       }
     });
   } catch (e) {
     console.warn('primaryPosition enrichment failed', e);
   }
+
+  // Set eligiblePositions on every player — pitchers from posAbbr, hitters from
+  // ELIGIBILITY_OVERRIDES first, then primary position enrichment, then boxscore fallback.
+  players.forEach(p => {
+    if (p.isPitcher) {
+      p.eligiblePositions = [p.posAbbr]; // 'SP' or 'RP'
+      return;
+    }
+    const override = ELIGIBILITY_OVERRIDES[p.id];
+    if (override) {
+      p.eligiblePositions = override;
+      // Also align posAbbr/posCode to primary eligible slot so display is correct
+      const primary = override[0];
+      p.posAbbr = primary;
+      const codeEntry = Object.entries(MLB_POS_ABBR).find(([, a]) => a === primary);
+      if (codeEntry) p.posCode = codeEntry[0];
+    } else {
+      const norm = normalizeEligiblePos(p.posAbbr);
+      p.eligiblePositions = norm ? [norm] : [];
+    }
+  });
 }
 
 async function fetchAllBoxscores(gamePks, date) {
@@ -829,12 +855,19 @@ function scoreAllPlayers(players, scoringKey) {
       const spEntry = Object.assign({}, p, {
         fantasyScore: pitResult.total, breakdown: pitResult.breakdown,
         posAbbr: 'SP', isPitcher: true, isStarter: true, isTwoWay: false,
+        eligiblePositions: ['SP'],
       });
       const batPosCode = p._batPosCode || '10';
+      // Batting eligibility: use override (minus pitcher slots) or derive from game-day pos
+      const batOverride = (ELIGIBILITY_OVERRIDES[p.id] || []).filter(pos => pos !== 'SP' && pos !== 'RP');
+      const batEligible = batOverride.length
+        ? batOverride
+        : [normalizeEligiblePos(MLB_POS_ABBR[batPosCode]) || 'DH'];
       const dhEntry = Object.assign({}, p, {
         fantasyScore: batResult.total, breakdown: batResult.breakdown,
-        posCode: batPosCode, posAbbr: MLB_POS_ABBR[batPosCode] || 'DH',
+        posCode: batPosCode, posAbbr: batEligible[0] || 'DH',
         isPitcher: false, isTwoWay: false,
+        eligiblePositions: batEligible,
       });
       return [spEntry, dhEntry];
     } else if (p.isPitcher) {
