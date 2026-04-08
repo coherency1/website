@@ -544,22 +544,23 @@ async function enrichPrimaryPositions(players) {
   if (!hitterIds.length) return;
   try {
     const data = await apiFetch(
-      `${API}/people?personIds=${hitterIds.join(',')}&fields=people,id,primaryPosition`
+      `${API}/people?personIds=${hitterIds.join(',')}&fields=people,id,primaryPosition,code,abbreviation`
     );
     const map = {};
     (data.people || []).forEach(person => {
       // Only override if primary position is a field position (not pitcher code '1')
-      if (person.primaryPosition && person.primaryPosition.code !== '1') {
+      const pos = person.primaryPosition;
+      if (pos && pos.code && pos.code !== '1') {
         map[person.id] = {
-          code: person.primaryPosition.code,
-          abbr: person.primaryPosition.abbreviation,
+          code: pos.code,
+          abbr: pos.abbreviation,
         };
       }
     });
     players.forEach(p => {
       if (!p.isPitcher && map[p.id]) {
-        p.posCode = map[p.id].code;
-        p.posAbbr = map[p.id].abbr;
+        p.posCode = map[p.id].code  || p.posCode;
+        p.posAbbr = map[p.id].abbr  || p.posAbbr;
       }
     });
   } catch (e) {
