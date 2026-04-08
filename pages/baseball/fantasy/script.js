@@ -249,18 +249,6 @@ function buildStatLine(p) {
     if (p.rawStats.pit.saves > 0) pitParts.push('SV');
     if (p.rawStats.pit.holds > 0) pitParts.push('HLD');
 
-    // Two-way: append batting line after a pipe divider
-    if (p.isTwoWay && p.rawStats.bat) {
-      const s = p.rawStats.bat;
-      const batParts = [];
-      if (s.homeRuns > 0) batParts.push(`${s.homeRuns} HR`);
-      if (s.rbi > 0) batParts.push(`${s.rbi} RBI`);
-      if (s.runs > 0) batParts.push(`${s.runs} R`);
-      if (s.stolenBases > 0) batParts.push(`${s.stolenBases} SB`);
-      if (s.hits > 0 && !batParts.length) batParts.push(`${s.hits} H`);
-      if (batParts.length) pitParts.push('| ' + batParts.join(' · '));
-    }
-
     return pitParts.join(' · ') || '—';
   } else {
     const s = p.rawStats.bat;
@@ -824,20 +812,27 @@ async function fetchMLBProjectedRos() {
 
 function scoreAllPlayers(players, scoringKey) {
   const sys = SCORING_SYSTEMS[scoringKey];
-  const scored = players.map(p => {
-    let result;
+  const scored = players.flatMap(p => {
     if (p.isTwoWay && p.rawStats.bat && p.rawStats.pit) {
-      // Two-way player: score both sides, but take the higher value only.
-      // He can only occupy one lineup slot (SP or DH), so scores are not additive.
+      // Two-way player: emit two separate entries — SP (pitching) and DH (batting)
       const pitResult = scorePitcher(p.rawStats.pit, sys);
       const batResult = scoreBatter(p.rawStats.bat, sys);
-      result = pitResult.total >= batResult.total ? pitResult : batResult;
+      const spEntry = Object.assign({}, p, {
+        fantasyScore: pitResult.total, breakdown: pitResult.breakdown,
+        posAbbr: 'SP', isPitcher: true, isStarter: true, isTwoWay: false,
+      });
+      const dhEntry = Object.assign({}, p, {
+        fantasyScore: batResult.total, breakdown: batResult.breakdown,
+        posAbbr: 'DH', posCode: '10', isPitcher: false, isTwoWay: false,
+      });
+      return [spEntry, dhEntry];
     } else if (p.isPitcher) {
-      result = scorePitcher(p.rawStats.pit, sys);
+      const result = scorePitcher(p.rawStats.pit, sys);
+      return [Object.assign({}, p, { fantasyScore: result.total, breakdown: result.breakdown })];
     } else {
-      result = scoreBatter(p.rawStats.bat, sys);
+      const result = scoreBatter(p.rawStats.bat, sys);
+      return [Object.assign({}, p, { fantasyScore: result.total, breakdown: result.breakdown })];
     }
-    return Object.assign({}, p, { fantasyScore: result.total, breakdown: result.breakdown });
   }).filter(p => {
     if (p.isPitcher) {
       return p.rawStats.pit && p.rawStats.pit.inningsPitched !== undefined;
