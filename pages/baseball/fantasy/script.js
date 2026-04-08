@@ -484,6 +484,35 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
       });
     });
 
+    // Fallback: scan team.players directly for any batter missed by battingOrder
+    // (can happen in live games where the API hasn't fully populated battingOrder)
+    Object.entries(team.players || {}).forEach(([key, p]) => {
+      const pid = p.person && p.person.id;
+      if (!pid || byId[pid] !== undefined) return;
+      const bat = p.stats && p.stats.batting;
+      if (!bat) return;
+      if ((bat.plateAppearances || 0) < 1 && (bat.atBats || 0) < 1) return;
+      const posCode = (p.position && p.position.code) || '0';
+      if (posCode === '1') return; // skip pitchers here — handled below
+      console.log(`[extract] battingOrder miss: ${p.person.fullName} (${pid}) pos=${p.position && p.position.abbreviation}`);
+      byId[pid] = players.length;
+      players.push({
+        id: pid,
+        name: p.person.fullName,
+        teamAbbr,
+        teamName: team.team.name,
+        posCode,
+        posAbbr: (p.position && p.position.abbreviation) || '?',
+        eligiblePositions: [],
+        isPitcher: false,
+        isStarter: false,
+        isTwoWay: false,
+        gamePk,
+        date: date || todayStr(),
+        rawStats: { bat },
+      });
+    });
+
     (team.pitchers || []).forEach((pid, idx) => {
       const p = team.players[`ID${pid}`];
       if (!p) return;
@@ -542,7 +571,11 @@ function setGameDayEligibility(players) {
 
 async function fetchAllBoxscores(gamePks, date) {
   const results = await Promise.all(
-    gamePks.map(pk => fetchBoxscore(pk).then(bs => extractPlayersFromBoxscore(bs, pk, date)))
+    gamePks.map(pk =>
+      fetchBoxscore(pk)
+        .then(bs => extractPlayersFromBoxscore(bs, pk, date))
+        .catch(e => { console.warn(`[boxscore] failed gamePk=${pk}`, e); return []; })
+    )
   );
   const seen = new Set();
   const flat = [];
