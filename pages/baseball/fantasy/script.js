@@ -54,19 +54,6 @@ const MLB_POS_ABBR = {
   '6': 'SS', '7': 'LF', '8': 'CF', '9': 'RF', '10': 'DH',
 };
 
-// ESPN 2025 fantasy eligibility overrides (MLB player ID → eligible fantasy positions).
-// Only needed for multi-position eligible players or players whose game-day position
-// differs from their fantasy-eligible slot (e.g. Henderson DHing but only SS-eligible).
-// To find a player's MLB ID: mlb.com/player/<name>/<id> or check the API response.
-// LF/CF/RF are all normalized to 'OF'. SP/RP handled separately for TWP players.
-const ELIGIBILITY_OVERRIDES = {
-  608566: ['3B', 'DH'],   // José Ramírez
-  683002: ['SS'],          // Gunnar Henderson (SS eligible despite DHing)
-  660271: ['OF', 'DH'],   // Shohei Ohtani batting side (SP handled by TWP split)
-  646240: ['3B', 'DH'],   // Rafael Devers
-  665489: ['1B', 'DH'],   // Vladimir Guerrero Jr
-  670541: ['OF', 'DH'],   // Yordan Alvarez
-};
 
 // Normalize LF/CF/RF → OF; pass everything else through
 function normalizeEligiblePos(abbr) {
@@ -539,111 +526,16 @@ function extractPlayersFromBoxscore(boxscore, gamePk, date) {
   return players;
 }
 
-async function enrichEligiblePositions(players) {
-  // Batch-fetch 2025 fielding stats to compute ESPN position eligibility.
-  // ESPN threshold: ≥20 games at a position in the prior season → eligible.
-  const hitterIds = players.filter(p => !p.isPitcher).map(p => p.id);
-  if (!hitterIds.length) return {};
-
-  const CHUNK = 50;
-  const chunks = [];
-  for (let i = 0; i < hitterIds.length; i += CHUNK) chunks.push(hitterIds.slice(i, i + CHUNK));
-
-  const eligMap = {}; // playerId → Set<normalizedPos>
-
-  await Promise.all(chunks.map(async chunk => {
-    try {
-      const data = await apiFetch(
-        `${API}/stats?stats=season&group=fielding&season=2025&sportId=1&playerIds=${chunk.join(',')}&fields=stats,splits,stat,gamesPlayed,player,id,position,code,abbreviation`
-      );
-      const splits = (data.stats && data.stats[0] && data.stats[0].splits) || [];
-      splits.forEach(s => {
-        const pid  = s.player && s.player.id;
-        const gp   = s.stat   && s.stat.gamesPlayed;
-        const code = s.position && s.position.code;
-        const abbr = s.position && s.position.abbreviation;
-        if (!pid || !gp || gp < 20) return;
-        if (!code || code === '1') return; // skip pitcher slot
-        const norm = normalizeEligiblePos(abbr);
-        if (!norm) return;
-        if (!eligMap[pid]) eligMap[pid] = new Set();
-        eligMap[pid].add(norm);
-      });
-    } catch (e) {
-      console.warn('fielding enrichment chunk failed', e);
-    }
-  }));
-
-  const result = {};
-  for (const [id, set] of Object.entries(eligMap)) result[id] = [...set];
-  return result;
-}
-
-async function enrichPrimaryPositions(players) {
-  // Batch-fetch canonical primary position from MLB API for all non-pitchers.
-  // This corrects game-day positional assignments (e.g. Gunnar Henderson playing DH
-  // but his primary position is SS, which is his fantasy-eligible slot).
-  const hitterIds = players.filter(p => !p.isPitcher).map(p => p.id);
-  if (!hitterIds.length) return;
-  try {
-    const data = await apiFetch(
-      `${API}/people?personIds=${hitterIds.join(',')}&fields=people,id,primaryPosition,code,abbreviation`
-    );
-    const map = {};
-    (data.people || []).forEach(person => {
-      // Only override if primary position is a field position (not pitcher code '1')
-      const pos = person.primaryPosition;
-      if (pos && pos.code && pos.code !== '1') {
-        map[person.id] = {
-          code: pos.code,
-          abbr: pos.abbreviation,
-        };
-      }
-    });
-    players.forEach(p => {
-      if (!p.isPitcher && map[p.id]) {
-        p.posCode = map[p.id].code || p.posCode;
-        p.posAbbr = map[p.id].abbr || p.posAbbr;
-      }
-    });
-  } catch (e) {
-    console.warn('primaryPosition enrichment failed', e);
-  }
-
-  // Derive eligibility from 2025 fielding stats (≥20 GP at position)
-  const fieldingElig = await enrichEligiblePositions(players);
-
-  // Set eligiblePositions on every player:
-  // pitchers → posAbbr; hitters → 2025 fielding data → fallback primary pos → OVERRIDES as correction
+// Set eligibility from game-day position — the position the player actually plays today.
+// No GP threshold, no prior-season stats. Pitchers use SP/RP; hitters use their lineup slot.
+function setGameDayEligibility(players) {
   players.forEach(p => {
     if (p.isPitcher) {
       p.eligiblePositions = [p.posAbbr]; // 'SP' or 'RP'
-      return;
-    }
-
-    // Base: 2025 fielding-derived eligibility
-    let elig = fieldingElig[p.id] ? [...fieldingElig[p.id]] : [];
-
-    // Fallback: no 2025 data → derive from primary position
-    if (!elig.length) {
+    } else {
       const norm = normalizeEligiblePos(p.posAbbr);
-      if (norm) elig = [norm];
-    }
-
-    // Correction layer: ELIGIBILITY_OVERRIDES replaces computed elig for listed players
-    const override = ELIGIBILITY_OVERRIDES[p.id];
-    if (override) {
-      elig = override;
-      const primary = override[0];
-      p.posAbbr = primary;
-      const codeEntry = Object.entries(MLB_POS_ABBR).find(([, a]) => a === primary);
-      if (codeEntry) p.posCode = codeEntry[0];
-    }
-
-    p.eligiblePositions = elig;
-
-    if (!elig.length) {
-      console.log(`[eligibility] empty: ${p.name} (${p.id}) pos=${p.posAbbr}`);
+      p.eligiblePositions = norm ? [norm] : [];
+      if (!norm) console.log(`[eligibility] empty: ${p.name} (${p.id}) pos=${p.posAbbr}`);
     }
   });
 }
@@ -662,7 +554,7 @@ async function fetchAllBoxscores(gamePks, date) {
       }
     }
   }
-  await enrichPrimaryPositions(flat);
+  setGameDayEligibility(flat);
   return flat;
 }
 
@@ -915,11 +807,8 @@ function scoreAllPlayers(players, scoringKey) {
         eligiblePositions: ['SP'],
       });
       const batPosCode = p._batPosCode || '10';
-      // Batting eligibility: use override (minus pitcher slots) or derive from game-day pos
-      const batOverride = (ELIGIBILITY_OVERRIDES[p.id] || []).filter(pos => pos !== 'SP' && pos !== 'RP');
-      const batEligible = batOverride.length
-        ? batOverride
-        : [normalizeEligiblePos(MLB_POS_ABBR[batPosCode]) || 'DH'];
+      // Batting eligibility: derive from game-day position (lineup slot)
+      const batEligible = [normalizeEligiblePos(MLB_POS_ABBR[batPosCode]) || 'DH'];
       const dhEntry = Object.assign({}, p, {
         fantasyScore: batResult.total, breakdown: batResult.breakdown,
         posCode: batPosCode, posAbbr: batEligible[0] || 'DH',
