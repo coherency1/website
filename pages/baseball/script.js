@@ -36,10 +36,10 @@ const HUB_ITEMS = {
         { num: '99', name: 'TBD',      pos: '---', url: null, status: 'PLANNED', stack: '---',      type: '---',  desc: 'Coming soon.' },
     ],
     apps: [
+        { num: '7',  name: 'FANTASY',     pos: 'DSH', url: '/baseball/fantasy/', status: 'LIVE',   stack: 'MLB API',  type: 'DASH', desc: 'Daily fantasy leaderboard. Player of the Day, top weekly performances, and position slot leaders. ESPN, Yahoo, and FanGraphs scoring.' },
+        { num: '14', name: 'RIGHT RESERVE', pos: 'WRI', url: 'https://thecoherency.substack.com', status: 'ACTIVE', stack: 'SUBSTACK', type: 'BLOG', desc: 'Right Reserve — baseball takes, random findings, and Coherency project writeups. A personal publication by Corey Chen.' },
         { num: '17', name: 'TBD',         pos: '---', url: null,          status: 'PLANNED', stack: '---',      type: '---',  desc: 'Coming soon.' },
         { num: '50', name: 'DRAFT ORDER', pos: 'RND', url: null,          status: 'PLANNED', stack: 'JS/CANVAS', type: 'TOOL', desc: 'Randomized draft order picker with fun visualizations — horse race, rain glass fill. For settling fantasy draft order disputes.' },
-        { num: '7',  name: 'FANTASY',     pos: 'DSH', url: '/baseball/fantasy/', status: 'ACTIVE', stack: 'MLB API',  type: 'DASH', desc: 'Daily fantasy leaderboard. Player of the Day, top weekly performances, and position slot leaders. ESPN, Yahoo, and FanGraphs scoring.' },
-        { num: '14', name: 'RIGHT RESERVE', pos: 'WRI', url: 'https://thecoherency.substack.com', status: 'ACTIVE', stack: 'SUBSTACK', type: 'BLOG', desc: 'Right Reserve — baseball takes, random findings, and Coherency project writeups. A personal publication by Corey Chen.' },
         { num: '23', name: 'TBD',         pos: '---', url: null,          status: 'PLANNED', stack: '---',       type: '---',  desc: 'Coming soon.' },
         { num: '35', name: 'TBD',         pos: '---', url: null,          status: 'PLANNED', stack: '---',       type: '---',  desc: 'Coming soon.' },
         { num: '42', name: 'TBD',         pos: '---', url: null,          status: 'PLANNED', stack: '---',       type: '---',  desc: 'Coming soon.' },
