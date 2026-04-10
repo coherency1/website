@@ -1,6 +1,4 @@
 {
-  "buildCommand": "node -e \"require('fs').writeFileSync('pages/baseball/turso-config.json', JSON.stringify({url:process.env.TURSO_URL,token:process.env.TURSO_TOKEN}))\"",
-  "outputDirectory": ".",
   "redirects": [
     {
       "source": "/baseball",
@@ -9,6 +7,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/baseball/turso-config.json",
+      "destination": "/api/turso-config"
+    },
     {
       "source": "/baseball/deadeye",
       "destination": "/pages/baseball/deadeye/index.html"
