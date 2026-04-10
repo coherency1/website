@@ -1,4 +1,6 @@
 {
+  "buildCommand": "node -e \"require('fs').writeFileSync('pages/baseball/turso-config.json', JSON.stringify({url:process.env.TURSO_URL,token:process.env.TURSO_TOKEN}))\"",
+  "outputDirectory": ".",
   "redirects": [
     {
       "source": "/baseball",
@@ -8,28 +10,28 @@
   ],
   "rewrites": [
     {
-      "source": "/baseball/statpad/:path*",
-      "destination": "https://coherency1.github.io/baseball-games/statpad/:path*"
-    },
-    {
-      "source": "/baseball/statpad/",
-      "destination": "https://coherency1.github.io/baseball-games/statpad/"
-    },
-    {
-      "source": "/baseball/statpad",
-      "destination": "https://coherency1.github.io/baseball-games/statpad/"
-    },
-    {
-      "source": "/baseball/deadeye/:path*",
-      "destination": "https://coherency1.github.io/baseball-games/deadeye/:path*"
+      "source": "/baseball/deadeye",
+      "destination": "/pages/baseball/deadeye/index.html"
     },
     {
       "source": "/baseball/deadeye/",
-      "destination": "https://coherency1.github.io/baseball-games/deadeye/"
+      "destination": "/pages/baseball/deadeye/index.html"
     },
     {
-      "source": "/baseball/deadeye",
-      "destination": "https://coherency1.github.io/baseball-games/deadeye/"
+      "source": "/baseball/deadeye/:path*",
+      "destination": "/pages/baseball/deadeye/:path*"
+    },
+    {
+      "source": "/baseball/statpad",
+      "destination": "/pages/baseball/statpad/index.html"
+    },
+    {
+      "source": "/baseball/statpad/",
+      "destination": "/pages/baseball/statpad/index.html"
+    },
+    {
+      "source": "/baseball/statpad/:path*",
+      "destination": "/pages/baseball/statpad/:path*"
     },
     {
       "source": "/baseball/fantasy",

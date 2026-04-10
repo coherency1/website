@@ -39,3 +39,6 @@ build/
 *.tmp
 .cache/
 .vercel
+
+# Turso runtime config — generated at Vercel deploy time from env vars, never committed
+pages/baseball/turso-config.json
