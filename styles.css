@@ -363,6 +363,122 @@ body {
     color: var(--accent);
 }
 
+/* ===================== WRITING LIST ===================== */
+
+.writing {
+    position: relative;
+    z-index: 1;
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: var(--space-24) var(--space-12);
+    border-top: 1px solid var(--border);
+}
+
+.post-list {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: var(--space-6);
+}
+
+.post-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-6);
+    padding: var(--space-4) 0;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--border);
+}
+
+.post-row:first-child {
+    border-top: 1px solid var(--border);
+}
+
+.post-date {
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+    width: 96px;
+    font-variant-numeric: tabular-nums;
+}
+
+.post-title {
+    font-size: 15px;
+    color: var(--text-soft);
+    flex-grow: 1;
+    transition: color var(--duration-fast) var(--ease-quart);
+}
+
+.post-row:hover .post-title {
+    color: var(--text);
+}
+
+.post-arrow {
+    font-size: 14px;
+    color: var(--accent);
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: opacity var(--duration-fast) var(--ease-quart),
+                transform var(--duration-fast) var(--ease-quart);
+}
+
+.post-row:hover .post-arrow {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ===================== PAGE HEADER (inner pages) ===================== */
+
+.page-header {
+    position: relative;
+    z-index: 1;
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: calc(var(--space-24) + 60px) var(--space-12) var(--space-16);
+}
+
+.page-title {
+    font-family: var(--font-heading);
+    font-size: clamp(40px, 7vw, 80px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+    background: linear-gradient(180deg, oklch(96% 0.005 220) 0%, oklch(78% 0.06 215) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.page-desc {
+    margin-top: var(--space-4);
+    font-size: 16px;
+    color: var(--text-muted);
+    font-weight: 300;
+}
+
+.writing-content {
+    position: relative;
+    z-index: 1;
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 0 var(--space-12) var(--space-24);
+}
+
+.year-group {
+    margin-bottom: var(--space-12);
+}
+
+.year-label {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+}
+
 /* ===================== ABOUT ===================== */
 
 .about {
@@ -437,9 +553,16 @@ body {
     }
 
     .work,
-    .about {
+    .writing,
+    .about,
+    .page-header,
+    .writing-content {
         padding-left: var(--space-6);
         padding-right: var(--space-6);
+    }
+
+    .post-date {
+        width: 80px;
     }
 
     .repo-grid {

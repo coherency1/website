@@ -1,4 +1,6 @@
 {
+  "buildCommand": "",
+  "outputDirectory": ".",
   "redirects": [
     {
       "source": "/baseball",
@@ -7,6 +9,14 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/writing",
+      "destination": "/pages/writing/index.html"
+    },
+    {
+      "source": "/writing/",
+      "destination": "/pages/writing/index.html"
+    },
     {
       "source": "/baseball/turso-config.json",
       "destination": "/api/turso-config"
