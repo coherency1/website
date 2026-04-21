@@ -19,6 +19,36 @@ const TEAM_COLORS = {
     'TEX': '#C0111F', 'TOR': '#1D6FA4', 'WSH': '#AB0003',
 };
 
+// Win Expectancy: WE_TABLE[inning][scoreDiff+10] = home team win probability
+// scoreDiff = homeScore - awayScore, clamped to -10..+10
+// Built from logistic sigmoid with k values calibrated to Tango Tiger RE288
+const WE_K = [0, 0.340, 0.405, 0.511, 0.633, 0.807, 1.066, 1.424, 1.966, 2.598, 2.598];
+const WE_TABLE = (() => {
+    const table = [];
+    for (let inn = 0; inn <= 10; inn++) {
+        const row = [];
+        const k = WE_K[Math.min(inn, 10)];
+        for (let d = -10; d <= 10; d++) {
+            row.push(+(1 / (1 + Math.exp(-k * d))).toFixed(4));
+        }
+        table.push(row);
+    }
+    return table;
+})();
+
+function getWP(inning, isBottom, awayScore, homeScore) {
+    const scoreDiff = homeScore - awayScore;
+    // If bottom half, home has last-at-bat edge when tied
+    const adj = (isBottom && scoreDiff === 0) ? 0.01 * Math.min(inning, 9) / 9 : 0;
+    const inn = Math.min(Math.max(inning, 1), 10);
+    const idx = Math.min(Math.max(scoreDiff + 10, 0), 20);
+    return Math.min(0.999, Math.max(0.001, WE_TABLE[inn][idx] + adj));
+}
+
+// Module-level FanGraphs state — shared between initScoreboard and initGameState
+let fgGameData = null; // populated by fetchFanGraphsGame
+let pitchfxData = [];  // populated by fetchPitchfx
+
 // ══════════════════════════════════════════════════════════
 // ── HUB DATA ─────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════
@@ -269,6 +299,44 @@ const VISIBLE_ROWS = 9;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`API ${res.status}`);
         return res.json();
+    }
+
+    async function fetchFanGraphsGame(dateStr) {
+        try {
+            const r = await fetch(`/baseball/fg-proxy?gamedate=${dateStr}`);
+            if (!r.ok) return;
+            const all = await r.json();
+            // find LAD game (teamId 22 = LAD in FanGraphs)
+            const game = all.find(g =>
+                g.schedule?.HomeTeamId === 22 || g.schedule?.AwayTeamId === 22
+            );
+            if (!game) return;
+            fgGameData = {
+                homeTeamId: game.schedule.HomeTeamId,
+                awayTeamId: game.schedule.AwayTeamId,
+                homeOdds: game.schedule.HomeGameOdds,
+                awayOdds: game.schedule.AwayGameOdds,
+                homeAbbr: game.schedule.HomeTeamAbbName,
+                awayAbbr: game.schedule.AwayTeamAbbName,
+                lineupHome: game.lineups?.lineupHome || [],
+                lineupAway: game.lineups?.lineupAway || [],
+                probHomeStats: game.lineups?.gameInfo?.ProbableHomeStats || null,
+                probAwayStats: game.lineups?.gameInfo?.ProbableAwayStats || null,
+                fgHomeTeamId: game.schedule.HomeTeamId,
+            };
+        } catch(e) {
+            console.warn('FG proxy unavailable:', e.message);
+        }
+    }
+
+    async function fetchPitchfx(dateStr, fgTeamId) {
+        try {
+            const r = await fetch(`https://www.fangraphs.com/api/scores/pitchfx/?gamedate=${dateStr}&teamid=${fgTeamId}&dh=0`);
+            if (!r.ok) return;
+            pitchfxData = await r.json();
+        } catch(e) {
+            console.warn('pitchfx unavailable:', e.message);
+        }
     }
 
     function todayStr() {
@@ -539,9 +607,16 @@ const VISIBLE_ROWS = 9;
     async function init() {
         renderStatus('LOADING', '');
         try {
-            const game = await fetchSchedule(todayStr());
+            const [game] = await Promise.allSettled([
+                fetchSchedule(todayStr()),
+                fetchFanGraphsGame(todayStr()),
+            ]).then(results => results.map(r => r.status === 'fulfilled' ? r.value : null));
             if (!game) { gameState = 'OFF_DAY'; await renderOffDay(); return; }
             currentGamePk = game.gamePk;
+            // Fire pitchfx fetch in background after FG game is known
+            if (fgGameData) {
+                fetchPitchfx(todayStr(), fgGameData.fgHomeTeamId).catch(() => {});
+            }
             const s = game.status?.abstractGameState;
             if (s === 'Live') { const f = await fetchLiveFeed(currentGamePk); gameState = 'LIVE'; renderLive(f); GAME.feed = f; GAME.state = 'LIVE'; }
             else if (s === 'Final') { const f = await fetchLiveFeed(currentGamePk); gameState = 'FINAL'; renderFinal(f); GAME.feed = f; GAME.state = 'FINAL'; }
@@ -634,6 +709,107 @@ const VISIBLE_ROWS = 9;
     // Initial render once feed arrives
     if (GAME.feed) render();
 
+    function renderWPChart(plays, awayAbbr, homeAbbr) {
+        if (!plays || plays.length < 2) return '';
+        const homeColor = TEAM_COLORS[homeAbbr] || '#4a8fe7';
+        const awayColor = TEAM_COLORS[awayAbbr] || '#7a96b8';
+
+        // Compute WP for each play
+        const points = plays.map((p, i) => {
+            const inning = p.about?.inning || 1;
+            const isBottom = p.about?.halfInning === 'bottom';
+            const away = p.result?.awayScore ?? 0;
+            const home = p.result?.homeScore ?? 0;
+            const wp = getWP(inning, isBottom, away, home);
+            return { i, wp, inning, isBottom, away, home,
+                event: p.result?.event || '',
+                desc: p.result?.description || '' };
+        });
+
+        const W = 400, H = 80, pad = 2;
+        const xScale = (i) => pad + (i / (points.length - 1)) * (W - 2 * pad);
+        const yScale = (wp) => pad + (1 - wp) * (H - 2 * pad);
+
+        // Build SVG polyline points
+        const polyPts = points.map(p => `${xScale(p.i).toFixed(1)},${yScale(p.wp).toFixed(1)}`).join(' ');
+        const midY = yScale(0.5).toFixed(1);
+
+        // Current WP
+        const last = points[points.length - 1];
+        const currentWP = last.wp;
+        const leadingAbbr = currentWP >= 0.5 ? homeAbbr : awayAbbr;
+        const leadingPct = currentWP >= 0.5 ? (currentWP * 100).toFixed(1) : ((1 - currentWP) * 100).toFixed(1);
+        const leadingColor = currentWP >= 0.5 ? homeColor : awayColor;
+
+        // Scoring plays as dots
+        const scoringDots = points.filter((p, i) => {
+            if (i === 0) return false;
+            return points[i].away !== points[i-1].away || points[i].home !== points[i-1].home;
+        }).map(p => {
+            const cx = xScale(p.i).toFixed(1);
+            const cy = yScale(p.wp).toFixed(1);
+            const side = p.wp >= 0.5 ? homeAbbr : awayAbbr;
+            return `<circle class="gs-wp-dot" cx="${cx}" cy="${cy}" r="3" fill="${side === homeAbbr ? homeColor : awayColor}">
+                <title>${p.isBottom ? '\u25BC' : '\u25B2'}${p.inning} | ${p.event}\n${p.desc.slice(0,80)}\n${p.away}-${p.home} | WP ${(p.wp*100).toFixed(1)}%</title>
+            </circle>`;
+        }).join('');
+
+        return `
+        <div class="gs-section gs-wp-section">
+            <div class="gs-wp-header">
+                <span class="gs-label">WIN PROBABILITY</span>
+                <span class="gs-current-wp" style="color:${leadingColor}">${leadingAbbr} ${leadingPct}%</span>
+            </div>
+            <svg class="gs-wp-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+                <line x1="${pad}" y1="${midY}" x2="${W-pad}" y2="${midY}" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
+                <text x="${pad+2}" y="${midY - 3}" font-size="7" fill="rgba(255,255,255,0.3)">50%</text>
+                <polyline points="${polyPts}" fill="none" stroke="${homeColor}" stroke-width="1.5" stroke-linejoin="round"/>
+                ${scoringDots}
+            </svg>
+        </div>`;
+    }
+
+    function renderLIBars(pfxData, awayAbbr, homeAbbr) {
+        if (!pfxData || pfxData.length < 2) return '';
+        // Only final pitches (finalpitch=1) — one bar per PA
+        const pas = pfxData.filter(p => p.finalpitch === 1);
+        if (pas.length < 2) return '';
+
+        // LI proxy: |endRe - startRE| normalized, capped at 3
+        const liValues = pas.map(p => {
+            const raw = Math.abs((p.endRe || 0) - (p.startRE || 0));
+            return Math.min(raw * 8, 3); // scale to roughly match real LI range
+        });
+        const maxLI = Math.max(...liValues, 0.1);
+
+        const W = 400, H = 30, pad = 2;
+        const barW = Math.max(1, ((W - 2 * pad) / pas.length) - 0.5);
+
+        function liColor(li) {
+            if (li < 0.85) return 'rgba(120,140,160,0.5)';
+            if (li < 2.0) return '#f5a623';
+            return '#e84040';
+        }
+
+        const bars = liValues.map((li, i) => {
+            const x = pad + i * ((W - 2 * pad) / pas.length);
+            const barH = Math.max(2, (li / 3) * (H - 2 * pad));
+            const y = H - pad - barH;
+            const label = li < 0.85 ? 'Low' : li < 2.0 ? 'High' : 'Very High';
+            return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${barH.toFixed(1)}" fill="${liColor(li)}" rx="1">
+                <title>LI ${li.toFixed(2)} \u00B7 ${label} Leverage\n${pas[i].PlayDesc?.slice(0,80) || ''}</title>
+            </rect>`;
+        }).join('');
+
+        return `
+        <div class="gs-section gs-li-section">
+            <div class="gs-label">LEVERAGE INDEX</div>
+            <svg class="gs-li-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+                ${bars}
+            </svg>
+        </div>`;
+    }
+
     function render() {
         const feed = GAME.feed;
         if (!feed) { $gsBody.innerHTML = '<div class="gs-empty">NO GAME DATA</div>'; return; }
@@ -694,6 +870,30 @@ const VISIBLE_ROWS = 9;
                 </div>`;
             }
 
+            // Pre-game WP bar — requires fgGameData
+            if (fgGameData) {
+                const isHome = homeAbbr === fgGameData.homeAbbr;
+                const dodgerOdds = isHome ? fgGameData.homeOdds : fgGameData.awayOdds;
+                const oppOdds = dodgerOdds != null ? (1 - dodgerOdds) : null;
+                if (dodgerOdds != null) {
+                    const ladPct = (dodgerOdds * 100).toFixed(1);
+                    const oppPct = (oppOdds * 100).toFixed(1);
+                    const ladColor = TEAM_COLORS['LAD'] || '#4a8fe7';
+                    const dodgerW = (dodgerOdds * 100).toFixed(1);
+                    const oppAbbr = isHome ? awayAbbr : homeAbbr;
+                    h += `<div class="gs-section gs-wp-bar-wrap">
+                        <div class="gs-label">WIN PROBABILITY</div>
+                        <div class="gs-wp-bar">
+                            <div class="gs-wp-bar-fill" style="width:${dodgerW}%;background:${ladColor}"></div>
+                        </div>
+                        <div class="gs-wp-bar-labels">
+                            <span style="color:${ladColor}">LAD ${ladPct}%</span>
+                            <span class="dim">${oppAbbr} ${oppPct}%</span>
+                        </div>
+                    </div>`;
+                }
+            }
+
             // Probable pitchers — side by side
             const pp = gd.probablePitchers;
             if (pp) {
@@ -738,9 +938,23 @@ const VISIBLE_ROWS = 9;
                             if (!pl) return;
                             const pos = pl.position?.abbreviation || '';
                             const ss = pl.seasonStats?.batting || {};
+                            // Look up handedness from fgGameData lineups by batting order position (1-indexed)
+                            let hand = '';
+                            if (fgGameData) {
+                                const fgLineup = side === 'home' ? fgGameData.lineupHome : fgGameData.lineupAway;
+                                if (fgLineup && fgLineup.length) {
+                                    const fgEntry = fgLineup.find(e =>
+                                        (e.BattingOrder === i + 1) || (e.battingOrder === i + 1)
+                                    );
+                                    if (fgEntry) {
+                                        hand = fgEntry.BatSide || fgEntry.batSide || fgEntry.BatHand || fgEntry.batHand || '';
+                                    }
+                                }
+                            }
                             h += `<div class="gs-pre-lineup-row">
                                 <span class="gs-pre-l-num">${i + 1}</span>
                                 <span class="gs-pre-l-pos">${pos}</span>
+                                <span class="gs-pre-l-hand">${hand}</span>
                                 <span class="gs-pre-l-name">${abbr(pl.person?.fullName)}</span>
                                 <span class="gs-pre-l-avg">${ss.avg || ''}</span>
                             </div>`;
@@ -895,6 +1109,12 @@ const VISIBLE_ROWS = 9;
                 </div>`;
             });
             h += `</div></div>`;
+        }
+
+        // ── WP Chart + LI Bars (live or final) ──
+        if ((isLive || isFinal) && (plays?.allPlays?.length || 0) > 1) {
+            h += renderWPChart(plays.allPlays, awayAbbr, homeAbbr);
+            h += renderLIBars(pitchfxData, awayAbbr, homeAbbr);
         }
 
         // ── Decisions (final) ──

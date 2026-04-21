@@ -54,6 +54,10 @@
       "destination": "/pages/baseball/fantasy/index.html"
     },
     {
+      "source": "/baseball/fg-proxy",
+      "destination": "/api/fg-proxy"
+    },
+    {
       "source": "/baseball/",
       "destination": "/pages/baseball/index.html"
     },
