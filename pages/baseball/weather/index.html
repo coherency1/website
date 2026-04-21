@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MLB Park Weather Explorer — real-time weather impact analysis for all 30 ballparks.">
+  <title>Park Weather — Coherency Baseball</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <a href="/baseball/" class="back-link">&#8592; HUB</a>
+    <h1 class="header-title">PARK WEATHER</h1>
+    <span class="version-badge">v1</span>
+  </header>
+
+  <main class="layout">
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="sidebar">
+
+      <!-- Park Selector -->
+      <div class="card">
+        <div class="card-label">BALLPARK</div>
+        <select id="parkSelect" class="park-select">
+          <optgroup label="AL EAST">
+            <option value="oriole_park">Baltimore Orioles — Oriole Park at Camden Yards</option>
+            <option value="fenway_park">Boston Red Sox — Fenway Park</option>
+            <option value="yankee_stadium">New York Yankees — Yankee Stadium</option>
+            <option value="rogers_centre">Toronto Blue Jays — Rogers Centre</option>
+            <option value="tropicana_field">Tampa Bay Rays — Tropicana Field</option>
+          </optgroup>
+          <optgroup label="AL CENTRAL">
+            <option value="guaranteed_rate">Chicago White Sox — Guaranteed Rate Field</option>
+            <option value="progressive_field">Cleveland Guardians — Progressive Field</option>
+            <option value="comerica_park">Detroit Tigers — Comerica Park</option>
+            <option value="kauffman_stadium">Kansas City Royals — Kauffman Stadium</option>
+            <option value="target_field">Minnesota Twins — Target Field</option>
+          </optgroup>
+          <optgroup label="AL WEST">
+            <option value="sutter_health_park">Oakland Athletics — Sutter Health Park</option>
+            <option value="t_mobile_park">Seattle Mariners — T-Mobile Park</option>
+            <option value="globe_life_field">Texas Rangers — Globe Life Field</option>
+            <option value="angel_stadium">Los Angeles Angels — Angel Stadium</option>
+            <option value="minute_maid_park">Houston Astros — Minute Maid Park</option>
+          </optgroup>
+          <optgroup label="NL EAST">
+            <option value="truist_park">Atlanta Braves — Truist Park</option>
+            <option value="marlins_park">Miami Marlins — LoanDepot Park</option>
+            <option value="citi_field">New York Mets — Citi Field</option>
+            <option value="citizens_bank_park">Philadelphia Phillies — Citizens Bank Park</option>
+            <option value="nationals_park">Washington Nationals — Nationals Park</option>
+          </optgroup>
+          <optgroup label="NL CENTRAL">
+            <option value="wrigley_field">Chicago Cubs — Wrigley Field</option>
+            <option value="great_american">Cincinnati Reds — Great American Ball Park</option>
+            <option value="coors_field">Colorado Rockies — Coors Field</option>
+            <option value="american_family_field">Milwaukee Brewers — American Family Field</option>
+            <option value="pnc_park">Pittsburgh Pirates — PNC Park</option>
+            <option value="busch_stadium">St. Louis Cardinals — Busch Stadium</option>
+          </optgroup>
+          <optgroup label="NL WEST">
+            <option value="chase_field">Arizona Diamondbacks — Chase Field</option>
+            <option value="dodger_stadium" selected>Los Angeles Dodgers — Dodger Stadium</option>
+            <option value="petco_park">San Diego Padres — Petco Park</option>
+            <option value="oracle_park">San Francisco Giants — Oracle Park</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- Weather Controls -->
+      <div class="card">
+        <div class="card-label">WEATHER CONDITIONS</div>
+
+        <!-- Live Weather Button -->
+        <button id="liveWeatherBtn" class="btn-live">
+          <span class="live-dot"></span>
+          FETCH LIVE WEATHER
+        </button>
+        <div id="liveWeatherStatus" class="live-status"></div>
+
+        <!-- Temperature -->
+        <div class="control-row">
+          <div class="control-header">
+            <span class="control-label">TEMPERATURE</span>
+            <span class="control-val" id="tempVal">72°F</span>
+          </div>
+          <input type="range" id="tempSlider" class="slider" min="30" max="110" value="72" step="1">
+          <div class="slider-endpoints"><span>30°F</span><span>110°F</span></div>
+        </div>
+
+        <!-- Wind Speed -->
+        <div class="control-row">
+          <div class="control-header">
+            <span class="control-label">WIND SPEED</span>
+            <span class="control-val" id="windSpeedVal">0 mph</span>
+          </div>
+          <input type="range" id="windSpeedSlider" class="slider" min="0" max="35" value="0" step="1">
+          <div class="slider-endpoints"><span>0 mph</span><span>35 mph</span></div>
+        </div>
+
+        <!-- Wind Direction Dial -->
+        <div class="control-row">
+          <div class="control-header">
+            <span class="control-label">WIND DIRECTION</span>
+            <span class="control-val" id="windDirVal">0° (Out CF)</span>
+          </div>
+          <div class="dial-wrap">
+            <svg id="windDial" class="wind-dial" viewBox="0 0 200 200" width="200" height="200">
+              <!-- Built by JS -->
+            </svg>
+          </div>
+          <!-- Direction Presets -->
+          <div class="dir-presets">
+            <button class="dir-btn active" data-deg="0">Out CF</button>
+            <button class="dir-btn" data-deg="45">Out RF</button>
+            <button class="dir-btn" data-deg="315">Out LF</button>
+            <button class="dir-btn" data-deg="180">In CF</button>
+            <button class="dir-btn" data-deg="90">Cross R</button>
+            <button class="dir-btn" data-deg="270">Cross L</button>
+          </div>
+        </div>
+
+        <!-- Pressure -->
+        <div class="control-row">
+          <div class="control-header">
+            <span class="control-label">PRESSURE</span>
+            <span class="control-val" id="pressureVal">1013 hPa</span>
+          </div>
+          <input type="range" id="pressureSlider" class="slider" min="985" max="1035" value="1013" step="1">
+          <div class="slider-endpoints"><span>985 hPa</span><span>1035 hPa</span></div>
+        </div>
+
+      </div>
+
+      <!-- Preset Scenarios -->
+      <div class="card">
+        <div class="card-label">SCENARIO PRESETS</div>
+        <div class="presets-grid">
+          <button class="preset-btn" data-preset="hot_out">
+            <span class="preset-icon">&#9728;</span>
+            <span class="preset-name">Hot + Out</span>
+            <span class="preset-sub">95°F, 15mph out</span>
+          </button>
+          <button class="preset-btn" data-preset="cold_in">
+            <span class="preset-icon">&#10052;</span>
+            <span class="preset-name">Cold + In</span>
+            <span class="preset-sub">45°F, 12mph in</span>
+          </button>
+          <button class="preset-btn" data-preset="storm">
+            <span class="preset-icon">&#9928;</span>
+            <span class="preset-name">Storm</span>
+            <span class="preset-sub">62°F, 25mph cross</span>
+          </button>
+          <button class="preset-btn" data-preset="coors_day">
+            <span class="preset-icon">&#9968;</span>
+            <span class="preset-name">Coors Day</span>
+            <span class="preset-sub">85°F, 8mph out CF</span>
+          </button>
+          <button class="preset-btn" data-preset="marine_layer">
+            <span class="preset-icon">&#127752;</span>
+            <span class="preset-name">Marine Layer</span>
+            <span class="preset-sub">64°F, calm, high P</span>
+          </button>
+          <button class="preset-btn" data-preset="baseline">
+            <span class="preset-icon">&#9679;</span>
+            <span class="preset-name">Baseline</span>
+            <span class="preset-sub">72°F, 0mph, 1013</span>
+          </button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ===== MAIN PANEL ===== -->
+    <section class="main-panel">
+
+      <!-- Park Info Header -->
+      <div class="park-header" id="parkHeader">
+        <div class="park-identity">
+          <div class="park-team-color" id="parkTeamColor"></div>
+          <div class="park-names">
+            <div class="park-name" id="parkName">Dodger Stadium</div>
+            <div class="park-team" id="parkTeam">Los Angeles Dodgers</div>
+          </div>
+        </div>
+        <div class="park-meta-chips">
+          <div class="meta-chip">
+            <span class="meta-chip-label">ALT</span>
+            <span class="meta-chip-val" id="parkAlt">515 ft</span>
+          </div>
+          <div class="meta-chip">
+            <span class="meta-chip-label">ROOF</span>
+            <span class="meta-chip-val" id="parkRoof">OPEN</span>
+          </div>
+          <div class="meta-chip">
+            <span class="meta-chip-label">SENSITIVITY</span>
+            <span class="meta-chip-val" id="parkSens">0.82</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dome Notice -->
+      <div class="dome-notice hidden" id="domeNotice">
+        <span class="dome-icon">&#127968;</span>
+        Weather impact is minimal — this park has a <strong id="domeRoofType">retractable</strong> roof. Stats shown reflect closed-roof conditions.
+      </div>
+
+      <!-- Main content grid -->
+      <div class="panel-grid">
+
+        <!-- Field Diagram -->
+        <div class="card field-card">
+          <div class="card-label">FIELD DIAGRAM</div>
+          <div class="field-diagram-wrap">
+            <svg id="fieldDiagram" class="field-diagram" viewBox="0 0 400 320">
+              <!-- Built by JS -->
+            </svg>
+          </div>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="stat-cards-row">
+          <div class="stat-card" id="hrCard">
+            <div class="stat-card-label">HR RATE</div>
+            <div class="stat-card-delta" id="hrDelta">+0.0%</div>
+            <div class="stat-bar-wrap">
+              <div class="stat-bar-track">
+                <div class="stat-bar" id="hrBar"></div>
+              </div>
+            </div>
+            <div class="stat-card-sub">vs league avg</div>
+          </div>
+          <div class="stat-card" id="runsCard">
+            <div class="stat-card-label">RUNS</div>
+            <div class="stat-card-delta" id="runsDelta">+0.0%</div>
+            <div class="stat-bar-wrap">
+              <div class="stat-bar-track">
+                <div class="stat-bar" id="runsBar"></div>
+              </div>
+            </div>
+            <div class="stat-card-sub">vs league avg</div>
+          </div>
+          <div class="stat-card" id="xbhCard">
+            <div class="stat-card-label">XBH</div>
+            <div class="stat-card-delta" id="xbhDelta">+0.0%</div>
+            <div class="stat-bar-wrap">
+              <div class="stat-bar-track">
+                <div class="stat-bar" id="xbhBar"></div>
+              </div>
+            </div>
+            <div class="stat-card-sub">vs league avg</div>
+          </div>
+        </div>
+
+        <!-- Ball Physics -->
+        <div class="card physics-card">
+          <div class="card-label">BALL PHYSICS</div>
+          <div class="physics-grid">
+
+            <!-- Left: numbers -->
+            <div class="physics-numbers">
+              <div class="carry-hero">
+                <span class="carry-ft" id="carryFt">400 ft</span>
+                <span class="carry-label">CARRY DISTANCE</span>
+              </div>
+              <div class="carry-delta-row">
+                <span class="carry-delta-label">vs 400 ft baseline</span>
+                <span class="carry-delta-val" id="carryDelta">+0 ft</span>
+              </div>
+              <div class="physics-stat-row">
+                <span class="physics-stat-label">EV NEEDED (HR)</span>
+                <span class="physics-stat-val" id="evNeeded">95.0 mph</span>
+              </div>
+              <div class="physics-stat-row">
+                <span class="physics-stat-label">AIR DENSITY</span>
+                <span class="physics-stat-val" id="airDensity">1.204 kg/m³</span>
+              </div>
+              <div class="density-bar-wrap">
+                <div class="density-bar-label-row">
+                  <span>Thin</span><span>Standard</span><span>Dense</span>
+                </div>
+                <div class="density-bar-track">
+                  <div class="density-bar-fill" id="densityBar"></div>
+                  <div class="density-bar-marker" id="densityMarker"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: trajectory SVG -->
+            <div class="trajectory-wrap">
+              <div class="trajectory-label">TRAJECTORY PROFILE</div>
+              <svg id="trajectorySvg" class="trajectory-svg" viewBox="0 0 300 160">
+                <!-- Built by JS -->
+              </svg>
+              <div class="trajectory-legend">
+                <span class="traj-legend-item"><span class="traj-dot dashed"></span> Baseline</span>
+                <span class="traj-legend-item"><span class="traj-dot solid"></span> Current</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Verdict -->
+        <div class="verdict-row">
+          <div class="verdict-pill" id="verdictPill">NEUTRAL</div>
+          <div class="verdict-desc" id="verdictDesc">Conditions near league average. No significant weather impact.</div>
+        </div>
+
+        <!-- Coefficient Breakdown -->
+        <details class="card coeff-card" id="coeffCard">
+          <summary class="card-label coeff-summary">
+            COEFFICIENT BREAKDOWN
+            <span class="coeff-toggle-icon">&#9660;</span>
+          </summary>
+          <div class="coeff-grid" id="coeffGrid">
+            <!-- Built by JS -->
+          </div>
+        </details>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>Weather data: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>. Physics calibrated against open-roof games 2024–2026. For entertainment &amp; analysis — not wagering advice.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

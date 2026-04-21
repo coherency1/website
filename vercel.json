@@ -46,6 +46,18 @@
       "destination": "/pages/baseball/statpad/:path*"
     },
     {
+      "source": "/baseball/weather",
+      "destination": "/pages/baseball/weather/index.html"
+    },
+    {
+      "source": "/baseball/weather/",
+      "destination": "/pages/baseball/weather/index.html"
+    },
+    {
+      "source": "/baseball/weather/:path*",
+      "destination": "/pages/baseball/weather/:path*"
+    },
+    {
       "source": "/baseball/fantasy",
       "destination": "/pages/baseball/fantasy/index.html"
     },
