@@ -745,7 +745,7 @@ const VISIBLE_ROWS = 9;
             const isScore = p.away !== points[i-1].away || p.home !== points[i-1].home;
             const cx = xScale(p.i).toFixed(1);
             const cy = yScale(p.wp).toFixed(1);
-            const dotColor = p.wp >= 0.5 ? homeColor : awayColor;
+            const dotColor = p.wp >= points[i-1].wp ? homeColor : awayColor;
             const tip = `${p.isBottom ? '\u25BC' : '\u25B2'}${p.inning} \u00B7 ${p.event} \u00B7 ${p.away}-${p.home} (${(p.wp*100).toFixed(1)}%)|${p.desc}`;
             if (isScore) {
                 return `<circle class="gs-wp-dot" cx="${cx}" cy="${cy}" r="6" fill="${dotColor}" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" data-tip="${tip.replace(/"/g, '&quot;')}"></circle>`;
