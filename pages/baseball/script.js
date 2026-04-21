@@ -643,6 +643,7 @@ const VISIBLE_ROWS = 9;
     const $gs = document.getElementById('centerGameState');
     const $gsBody = document.getElementById('gsBody');
     let isOpen = true;
+    const seenPlayIds = new Set(); // tracks plays already flashed — prevents re-flash on poll
     let prevPanel = 'gamestate'; // 'gamestate' | 'infocard'
 
     function abbr(name) {
@@ -1088,7 +1089,10 @@ const VISIBLE_ROWS = 9;
                     <div class="gs-label">${lbl}</div>
                     <div class="gs-plays">`;
                 [...inningPlays].reverse().forEach((p, i) => {
-                    const cls = i === 0 ? 'gs-play-row gs-play-new' : 'gs-play-row';
+                    const playId = p.about?.atBatIndex ?? `${p.about?.inning}-${p.matchup?.batter?.id}-${p.result?.event}`;
+                    const isNew = i === 0 && !seenPlayIds.has(playId);
+                    if (isNew) seenPlayIds.add(playId);
+                    const cls = isNew ? 'gs-play-row gs-play-new' : 'gs-play-row';
                     h += `<div class="${cls}">
                         <span class="gs-play-name">${abbr(p.matchup?.batter?.fullName)}</span>
                         <span class="gs-play-event">${p.result.event}</span>
