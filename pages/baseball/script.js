@@ -334,6 +334,7 @@ const VISIBLE_ROWS = 9;
             const r = await fetch(`https://www.fangraphs.com/api/scores/pitchfx/?gamedate=${dateStr}&teamid=${fgTeamId}&dh=0`);
             if (!r.ok) return;
             pitchfxData = await r.json();
+            if (GAME.onUpdate) GAME.onUpdate(); // re-render once LI data arrives
         } catch(e) {
             console.warn('pitchfx unavailable:', e.message);
         }
@@ -714,7 +715,6 @@ const VISIBLE_ROWS = 9;
         const homeColor = TEAM_COLORS[homeAbbr] || '#4a8fe7';
         const awayColor = TEAM_COLORS[awayAbbr] || '#7a96b8';
 
-        // Compute WP for each play
         const points = plays.map((p, i) => {
             const inning = p.about?.inning || 1;
             const isBottom = p.about?.halfInning === 'bottom';
@@ -723,35 +723,34 @@ const VISIBLE_ROWS = 9;
             const wp = getWP(inning, isBottom, away, home);
             return { i, wp, inning, isBottom, away, home,
                 event: p.result?.event || '',
-                desc: p.result?.description || '' };
+                desc: (p.result?.description || '').slice(0, 80) };
         });
 
-        const W = 400, H = 80, pad = 2;
-        const xScale = (i) => pad + (i / (points.length - 1)) * (W - 2 * pad);
+        const W = 1000, H = 160, pad = 8;
+        const xScale = (i) => pad + (i / Math.max(points.length - 1, 1)) * (W - 2 * pad);
         const yScale = (wp) => pad + (1 - wp) * (H - 2 * pad);
 
-        // Build SVG polyline points
         const polyPts = points.map(p => `${xScale(p.i).toFixed(1)},${yScale(p.wp).toFixed(1)}`).join(' ');
         const midY = yScale(0.5).toFixed(1);
 
-        // Current WP
         const last = points[points.length - 1];
         const currentWP = last.wp;
         const leadingAbbr = currentWP >= 0.5 ? homeAbbr : awayAbbr;
         const leadingPct = currentWP >= 0.5 ? (currentWP * 100).toFixed(1) : ((1 - currentWP) * 100).toFixed(1);
         const leadingColor = currentWP >= 0.5 ? homeColor : awayColor;
 
-        // Scoring plays as dots
-        const scoringDots = points.filter((p, i) => {
-            if (i === 0) return false;
-            return points[i].away !== points[i-1].away || points[i].home !== points[i-1].home;
-        }).map(p => {
+        // All plays as dots; scoring plays get a larger ring
+        const dots = points.map((p, i) => {
+            if (i === 0) return '';
+            const isScore = p.away !== points[i-1].away || p.home !== points[i-1].home;
             const cx = xScale(p.i).toFixed(1);
             const cy = yScale(p.wp).toFixed(1);
-            const side = p.wp >= 0.5 ? homeAbbr : awayAbbr;
-            return `<circle class="gs-wp-dot" cx="${cx}" cy="${cy}" r="3" fill="${side === homeAbbr ? homeColor : awayColor}">
-                <title>${p.isBottom ? '\u25BC' : '\u25B2'}${p.inning} | ${p.event}\n${p.desc.slice(0,80)}\n${p.away}-${p.home} | WP ${(p.wp*100).toFixed(1)}%</title>
-            </circle>`;
+            const dotColor = p.wp >= 0.5 ? homeColor : awayColor;
+            const tip = `${p.isBottom ? '\u25BC' : '\u25B2'}${p.inning} \u00B7 ${p.event} \u00B7 ${p.away}-${p.home} (${(p.wp*100).toFixed(1)}%)|${p.desc}`;
+            if (isScore) {
+                return `<circle class="gs-wp-dot" cx="${cx}" cy="${cy}" r="6" fill="${dotColor}" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" data-tip="${tip.replace(/"/g, '&quot;')}"></circle>`;
+            }
+            return `<circle class="gs-wp-dot gs-wp-dot-sm" cx="${cx}" cy="${cy}" r="3" fill="${dotColor}" opacity="0.5" data-tip="${tip.replace(/"/g, '&quot;')}"></circle>`;
         }).join('');
 
         return `
@@ -760,12 +759,15 @@ const VISIBLE_ROWS = 9;
                 <span class="gs-label">WIN PROBABILITY</span>
                 <span class="gs-current-wp" style="color:${leadingColor}">${leadingAbbr} ${leadingPct}%</span>
             </div>
-            <svg class="gs-wp-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-                <line x1="${pad}" y1="${midY}" x2="${W-pad}" y2="${midY}" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
-                <text x="${pad+2}" y="${midY - 3}" font-size="7" fill="rgba(255,255,255,0.3)">50%</text>
-                <polyline points="${polyPts}" fill="none" stroke="${homeColor}" stroke-width="1.5" stroke-linejoin="round"/>
-                ${scoringDots}
-            </svg>
+            <div class="gs-wp-wrap">
+                <svg class="gs-wp-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+                    <line x1="${pad}" y1="${midY}" x2="${W-pad}" y2="${midY}" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="8,8"/>
+                    <text x="${pad+4}" y="${Number(midY)-4}" font-size="14" fill="rgba(255,255,255,0.25)">50%</text>
+                    <polyline points="${polyPts}" fill="none" stroke="${homeColor}" stroke-width="2.5" stroke-linejoin="round"/>
+                    ${dots}
+                </svg>
+                <div class="gs-wp-tooltip" id="gs-wp-tooltip"></div>
+            </div>
         </div>`;
     }
 
@@ -1065,6 +1067,12 @@ const VISIBLE_ROWS = 9;
                 });
                 h += `</div></div>`;
             }
+
+            // ── WP Chart + LI (live only — after diamond/defense, most relevant here) ──
+            if ((plays?.allPlays?.length || 0) > 1) {
+                h += renderWPChart(plays.allPlays, awayAbbr, homeAbbr);
+                h += renderLIBars(pitchfxData, awayAbbr, homeAbbr);
+            }
         }
 
         // ── This Inning ──
@@ -1079,8 +1087,9 @@ const VISIBLE_ROWS = 9;
                 h += `<div class="gs-section">
                     <div class="gs-label">${lbl}</div>
                     <div class="gs-plays">`;
-                inningPlays.forEach(p => {
-                    h += `<div class="gs-play-row">
+                [...inningPlays].reverse().forEach((p, i) => {
+                    const cls = i === 0 ? 'gs-play-row gs-play-new' : 'gs-play-row';
+                    h += `<div class="${cls}">
                         <span class="gs-play-name">${abbr(p.matchup?.batter?.fullName)}</span>
                         <span class="gs-play-event">${p.result.event}</span>
                     </div>`;
@@ -1111,8 +1120,8 @@ const VISIBLE_ROWS = 9;
             h += `</div></div>`;
         }
 
-        // ── WP Chart + LI Bars (live or final) ──
-        if ((isLive || isFinal) && (plays?.allPlays?.length || 0) > 1) {
+        // ── WP Chart + LI Bars for final games (already rendered live above; show again for final) ──
+        if (isFinal && (plays?.allPlays?.length || 0) > 1) {
             h += renderWPChart(plays.allPlays, awayAbbr, homeAbbr);
             h += renderLIBars(pitchfxData, awayAbbr, homeAbbr);
         }
@@ -1211,5 +1220,25 @@ const VISIBLE_ROWS = 9;
             box.style.display = open ? 'none' : '';
             document.getElementById('gsBoxToggle').textContent = open ? 'BOX SCORE \u25BE' : 'BOX SCORE \u25B4';
         });
+
+        // WP dot hover tooltips
+        const wpWrap = $gsBody.querySelector('.gs-wp-wrap');
+        const wpTooltip = document.getElementById('gs-wp-tooltip');
+        if (wpWrap && wpTooltip) {
+            $gsBody.querySelectorAll('.gs-wp-dot').forEach(dot => {
+                dot.addEventListener('mouseenter', () => {
+                    wpTooltip.textContent = (dot.dataset.tip || '').replace(/\|/g, '\n');
+                    wpTooltip.style.display = 'block';
+                });
+                dot.addEventListener('mouseleave', () => { wpTooltip.style.display = 'none'; });
+                dot.addEventListener('mousemove', e => {
+                    const rect = wpWrap.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    wpTooltip.style.left = Math.min(x, rect.width - 200) + 'px';
+                    wpTooltip.style.top = Math.max(0, y - 56) + 'px';
+                });
+            });
+        }
     }
 })();

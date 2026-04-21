@@ -783,13 +783,19 @@ body {
 .gs-wp-section { padding: 0 12px 8px; }
 .gs-wp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .gs-current-wp { font-family: 'Press Start 2P', monospace; font-size: 10px; letter-spacing: 0.5px; }
-.gs-wp-svg { width: 100%; height: 80px; display: block; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; background: rgba(0,0,0,0.2); }
-.gs-wp-dot { cursor: default; transition: r 0.15s; }
-.gs-wp-dot:hover { r: 5; }
+.gs-wp-wrap { position: relative; width: 100%; padding-bottom: 16%; }
+.gs-wp-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; background: rgba(0,0,0,0.2); overflow: visible; }
+.gs-wp-dot { cursor: crosshair; }
+.gs-wp-dot:hover { opacity: 1 !important; }
+.gs-wp-tooltip { position: absolute; pointer-events: none; display: none; background: rgba(10,10,15,0.92); color: #e0e8f0; font-size: 10px; line-height: 1.5; padding: 5px 9px; border-radius: 3px; white-space: pre; z-index: 20; border: 1px solid rgba(255,255,255,0.15); max-width: 220px; }
 
 /* ── LEVERAGE INDEX BARS ────────────────────────────── */
-.gs-li-section { padding: 0 12px 8px; }
-.gs-li-svg { width: 100%; height: 30px; display: block; border-radius: 4px; background: rgba(0,0,0,0.15); }
+.gs-li-section { padding: 2px 12px 8px; }
+.gs-li-svg { width: 100%; height: 36px; display: block; border-radius: 4px; background: rgba(0,0,0,0.15); }
+
+/* ── THIS INNING HIGHLIGHT ──────────────────────────── */
+@keyframes gs-play-flash { 0% { background: rgba(255,220,80,0.18); } 100% { background: transparent; } }
+.gs-play-new { animation: gs-play-flash 2s ease-out forwards; }
 
 /* ── PRE-GAME WP BAR ────────────────────────────────── */
 .gs-wp-bar-wrap { padding: 0 12px 8px; }
