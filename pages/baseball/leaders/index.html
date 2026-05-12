@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard — Diamond Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">coherency</a>
+    <div class="nav-links">
+      <a href="/baseball/matchups/" class="nav-link">matchups</a>
+      <a href="/baseball/" class="nav-link">baseball</a>
+    </div>
+  </nav>
+
+  <main class="leader-dash">
+
+    <header class="dash-topbar">
+      <div class="dash-title-block">
+        <span class="dash-title-text">DIAMOND_ENGINE</span>
+        <span class="dash-subtitle">LEADERBOARD</span>
+      </div>
+      <div class="dash-meta">
+        <span class="dash-date" id="dashDate"></span>
+      </div>
+      <div class="dash-status" id="dashStatus">LOADING</div>
+    </header>
+
+    <div class="controls">
+      <div class="control-group">
+        <label class="control-label">STAT</label>
+        <select class="control-select" id="statSelect">
+          <option value="hr_mean">HR (proj)</option>
+          <option value="h_mean">H (proj)</option>
+          <option value="tb_mean">TB (proj)</option>
+          <option value="r_mean">R (proj)</option>
+          <option value="rbi_mean">RBI (proj)</option>
+          <option value="k_mean">K (proj)</option>
+          <option value="pa_mean">PA (proj)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label class="control-label">LIMIT</label>
+        <select class="control-select" id="limitSelect">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+    </div>
+
+    <section class="leader-table-wrap" id="tableWrap">
+      <table class="leader-table" id="leaderTable">
+        <thead>
+          <tr>
+            <th class="col-rank">#</th>
+            <th class="col-player">PLAYER</th>
+            <th class="col-matchup">MATCHUP</th>
+            <th class="col-stat" id="statHeader">HR</th>
+            <th class="col-bar">PROJECTION</th>
+          </tr>
+        </thead>
+        <tbody id="leaderBody"></tbody>
+      </table>
+    </section>
+
+    <div class="empty-state" id="emptyState" hidden>
+      <span class="empty-icon">//</span>
+      <span class="empty-text">NO LEADERBOARD DATA</span>
+      <span class="empty-sub">Run the daily pipeline to generate projections.</span>
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

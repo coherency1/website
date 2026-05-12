@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parlay Calculator — Diamond Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">coherency</a>
+    <div class="nav-links">
+      <a href="/baseball/" class="nav-link">baseball</a>
+    </div>
+  </nav>
+
+  <main class="parlay-dash">
+
+    <header class="dash-topbar">
+      <div class="dash-title-block">
+        <span class="dash-title-text">DIAMOND_ENGINE</span>
+        <span class="dash-subtitle">PARLAY CALCULATOR</span>
+      </div>
+      <div class="dash-meta">
+        <span class="dash-date" id="dashDate"></span>
+      </div>
+      <div class="dash-status" id="dashStatus">LOADING</div>
+    </header>
+
+    <p class="parlay-desc">Build a parlay from sim-projected props. Compare fair price (from Monte Carlo probabilities) vs sportsbook implied odds.</p>
+
+    <!-- ── Leg Builder ── -->
+    <section class="leg-builder">
+      <div class="builder-header">
+        <h3 class="builder-title">PARLAY LEGS</h3>
+        <span class="leg-count" id="legCount">0 LEGS</span>
+      </div>
+
+      <div class="game-select-row">
+        <label class="input-label">GAME</label>
+        <select id="gamePicker" class="select-input">
+          <option value="">Loading games...</option>
+        </select>
+      </div>
+
+      <div class="available-props" id="availableProps">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="selected-legs" id="selectedLegs">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- ── Parlay Summary ── -->
+    <section class="parlay-summary" id="parlaySummary" hidden>
+      <div class="summary-header">
+        <h3 class="summary-title">PARLAY SUMMARY</h3>
+        <button class="clear-btn" id="clearBtn">CLEAR ALL</button>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span class="summary-label">FAIR PROBABILITY</span>
+          <span class="summary-value" id="fairProb">--</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">FAIR ODDS</span>
+          <span class="summary-value" id="fairOdds">--</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">FAIR PAYOUT</span>
+          <span class="summary-value" id="fairPayout">--</span>
+          <span class="summary-sub">per $1 wagered</span>
+        </div>
+      </div>
+
+      <div class="book-compare">
+        <div class="book-input-row">
+          <label class="input-label">SPORTSBOOK ODDS</label>
+          <input type="text" id="bookOdds" class="odds-input" placeholder="+450">
+          <button class="compare-btn" id="compareBtn">COMPARE</button>
+        </div>
+        <div class="edge-result" id="edgeResult" hidden>
+          <div class="edge-row">
+            <span class="edge-label">BOOK IMPLIED</span>
+            <span class="edge-value" id="bookImplied">--</span>
+          </div>
+          <div class="edge-row">
+            <span class="edge-label">FAIR PROB</span>
+            <span class="edge-value" id="fairProbCompare">--</span>
+          </div>
+          <div class="edge-row highlight">
+            <span class="edge-label">EDGE</span>
+            <span class="edge-value" id="edgeValue">--</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="empty-state" id="emptyState" hidden>
+      <span class="empty-icon">//</span>
+      <span class="empty-text">NO SIMULATION DATA</span>
+      <span class="empty-sub">Run the daily pipeline to generate prop projections.</span>
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -69,12 +69,12 @@ const HUB_ITEMS = {
         { num: '7',  name: 'FANTASY',     pos: 'DSH', url: '/baseball/fantasy/', status: 'LIVE',   stack: 'MLB API',  type: 'DASH', desc: 'Daily fantasy leaderboard. Player of the Day, top weekly performances, and position slot leaders. ESPN, Yahoo, and FanGraphs scoring.' },
         { num: '14', name: 'RIGHT RESERVE', pos: 'WRI', url: 'https://thecoherency.substack.com', status: 'ACTIVE', stack: 'SUBSTACK', type: 'BLOG', desc: 'Right Reserve — baseball takes, random findings, and Coherency project writeups. A personal publication by Corey Chen.' },
         { num: '17', name: 'WEATHER',     pos: 'WTH', url: '/baseball/weather/', status: 'LIVE',   stack: 'OPEN-METEO', type: 'DASH', desc: 'MLB Park Weather Explorer. Live weather conditions, carry distance physics, HR/Runs/XBH deltas for all 30 parks. Draggable wind dial, trajectory visualization.' },
-        { num: '50', name: 'DRAFT ORDER', pos: 'RND', url: null,          status: 'PLANNED', stack: 'JS/CANVAS', type: 'TOOL', desc: 'Randomized draft order picker with fun visualizations — horse race, rain glass fill. For settling fantasy draft order disputes.' },
-        { num: '23', name: 'TBD',         pos: '---', url: null,          status: 'PLANNED', stack: '---',       type: '---',  desc: 'Coming soon.' },
-        { num: '35', name: 'TBD',         pos: '---', url: null,          status: 'PLANNED', stack: '---',       type: '---',  desc: 'Coming soon.' },
-        { num: '42', name: 'TBD',         pos: '---', url: null,          status: 'PLANNED', stack: '---',       type: '---',  desc: 'Coming soon.' },
-        { num: '56', name: 'TBD',         pos: '---', url: null,          status: 'PLANNED', stack: '---',       type: '---',  desc: 'Coming soon.' },
-        { num: '74', name: 'TBD',         pos: '---', url: null,          status: 'PLANNED', stack: '---',       type: '---',  desc: 'Coming soon.' },
+        { num: '50', name: 'F5 / YRFI',    pos: 'F5R', url: '/baseball/f5/',      status: 'LIVE',    stack: 'DIAMOND',    type: 'DASH', desc: 'First Five Innings projections and YRFI/NRFI probabilities. Bypass bullpen volatility, focus on starting pitcher matchups.' },
+        { num: '23', name: 'MATCHUPS',     pos: 'SIM', url: '/baseball/matchups/', status: 'LIVE',    stack: 'DIAMOND',    type: 'DASH', desc: 'Diamond Engine matchup ratings. Win probabilities, moneylines, totals, F5, and YRFI for every game — powered by Monte Carlo simulation.' },
+        { num: '35', name: 'PROPS',        pos: 'PRP', url: '/baseball/props/',    status: 'LIVE',    stack: 'DIAMOND',    type: 'DASH', desc: 'Player prop projections. Hits, total bases, HR, K over/under lines from 1K-iteration sim distributions.' },
+        { num: '42', name: 'LEADERBOARD',  pos: 'LDR', url: '/baseball/leaders/',  status: 'LIVE',    stack: 'DIAMOND',    type: 'DASH', desc: 'Customizable sim leaderboard. Sort by projected HR, hits, K, or any stat. Position filter, min PA threshold.' },
+        { num: '56', name: 'PARLAY',       pos: 'PLY', url: '/baseball/parlay/',   status: 'LIVE',    stack: 'DIAMOND',    type: 'TOOL', desc: 'Correlated parlay fair pricing from sim co-occurrence. Compare true joint probability vs naive multiplication.' },
+        { num: '74', name: 'MATCHUP LAB',  pos: 'LAB', url: '/baseball/lab/',      status: 'LIVE',    stack: 'DIAMOND',    type: 'TOOL', desc: 'Hypothetical batter-vs-pitcher matchup machine. Pick any player combo at any park and see projected outcomes.' },
     ]
 };
 

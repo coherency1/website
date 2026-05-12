@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Props — Diamond Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">coherency</a>
+    <div class="nav-links">
+      <a href="/baseball/matchups/" class="nav-link">matchups</a>
+      <a href="/baseball/" class="nav-link">baseball</a>
+    </div>
+  </nav>
+
+  <main class="props-dash">
+
+    <header class="dash-topbar">
+      <div class="dash-title-block">
+        <span class="dash-title-text">DIAMOND_ENGINE</span>
+        <span class="dash-subtitle">PLAYER PROPS</span>
+      </div>
+      <div class="dash-meta">
+        <span class="dash-date" id="dashDate"></span>
+      </div>
+      <div class="dash-status" id="dashStatus">LOADING</div>
+    </header>
+
+    <nav class="game-picker" id="gamePicker">
+      <!-- Game tabs rendered by JS -->
+    </nav>
+
+    <section class="props-table-wrap" id="propsWrap">
+      <table class="props-table" id="propsTable">
+        <thead>
+          <tr>
+            <th class="col-player">PLAYER</th>
+            <th class="col-stat">H</th>
+            <th class="col-stat">TB</th>
+            <th class="col-stat">HR</th>
+            <th class="col-stat">R</th>
+            <th class="col-stat">RBI</th>
+            <th class="col-stat">K</th>
+          </tr>
+        </thead>
+        <tbody id="propsBody"></tbody>
+      </table>
+    </section>
+
+    <div class="empty-state" id="emptyState" hidden>
+      <span class="empty-icon">//</span>
+      <span class="empty-text">NO PROP DATA</span>
+      <span class="empty-sub">Select a game or run the daily pipeline.</span>
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

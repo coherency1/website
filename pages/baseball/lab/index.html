@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matchup Lab — Diamond Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">coherency</a>
+    <div class="nav-links">
+      <a href="/baseball/" class="nav-link">baseball</a>
+    </div>
+  </nav>
+
+  <main class="lab-dash">
+
+    <header class="dash-topbar">
+      <div class="dash-title-block">
+        <span class="dash-title-text">DIAMOND_ENGINE</span>
+        <span class="dash-subtitle">MATCHUP LAB</span>
+      </div>
+      <div class="dash-status" id="dashStatus">READY</div>
+    </header>
+
+    <p class="lab-desc">Pick any batter vs any pitcher. Live inference against the XGBoost matchup model using Kalman-filtered talent states.</p>
+
+    <!-- ── Input Panel ── -->
+    <section class="input-panel">
+      <div class="input-row">
+        <div class="input-group">
+          <label class="input-label">BATTER</label>
+          <input type="text" id="batterInput" class="player-input" placeholder="Player name or MLB ID" autocomplete="off">
+          <div class="suggestion-list" id="batterSuggestions"></div>
+          <div class="side-picker">
+            <button class="side-btn active" data-side="R" id="batR">R</button>
+            <button class="side-btn" data-side="L" id="batL">L</button>
+            <button class="side-btn" data-side="S" id="batS">S</button>
+          </div>
+        </div>
+
+        <div class="vs-divider">VS</div>
+
+        <div class="input-group">
+          <label class="input-label">PITCHER</label>
+          <input type="text" id="pitcherInput" class="player-input" placeholder="Player name or MLB ID" autocomplete="off">
+          <div class="suggestion-list" id="pitcherSuggestions"></div>
+          <div class="side-picker">
+            <button class="side-btn active" data-side="R" id="pitR">R</button>
+            <button class="side-btn" data-side="L" id="pitL">L</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="run-btn" id="runBtn">RUN MATCHUP</button>
+    </section>
+
+    <!-- ── Results Panel ── -->
+    <section class="results-panel" id="resultsPanel" hidden>
+
+      <div class="result-header" id="resultHeader"></div>
+
+      <!-- VS Score gauge -->
+      <div class="vs-gauge-wrap">
+        <div class="vs-gauge">
+          <div class="vs-gauge-fill" id="vsGaugeFill"></div>
+          <div class="vs-gauge-needle" id="vsGaugeNeedle"></div>
+        </div>
+        <div class="vs-gauge-labels">
+          <span class="vs-label pitcher">PITCHER</span>
+          <span class="vs-score" id="vsScore">0</span>
+          <span class="vs-label batter">BATTER</span>
+        </div>
+      </div>
+
+      <!-- Outcome probabilities -->
+      <div class="outcomes-grid" id="outcomesGrid"></div>
+
+      <!-- Component ratings -->
+      <div class="components-row" id="componentsRow"></div>
+
+      <!-- Stat line -->
+      <div class="stat-line" id="statLine"></div>
+
+    </section>
+
+    <div class="empty-state" id="emptyState" hidden>
+      <span class="empty-icon">//</span>
+      <span class="empty-text">MODEL UNAVAILABLE</span>
+      <span class="empty-sub">Matchup model not loaded. Ensure Diamond Engine API is running.</span>
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

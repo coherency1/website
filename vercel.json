@@ -70,6 +70,78 @@
       "destination": "/api/fg-proxy"
     },
     {
+      "source": "/baseball/matchups",
+      "destination": "/pages/baseball/matchups/index.html"
+    },
+    {
+      "source": "/baseball/matchups/",
+      "destination": "/pages/baseball/matchups/index.html"
+    },
+    {
+      "source": "/baseball/matchups/:path*",
+      "destination": "/pages/baseball/matchups/:path*"
+    },
+    {
+      "source": "/baseball/props",
+      "destination": "/pages/baseball/props/index.html"
+    },
+    {
+      "source": "/baseball/props/",
+      "destination": "/pages/baseball/props/index.html"
+    },
+    {
+      "source": "/baseball/props/:path*",
+      "destination": "/pages/baseball/props/:path*"
+    },
+    {
+      "source": "/baseball/leaders",
+      "destination": "/pages/baseball/leaders/index.html"
+    },
+    {
+      "source": "/baseball/leaders/",
+      "destination": "/pages/baseball/leaders/index.html"
+    },
+    {
+      "source": "/baseball/leaders/:path*",
+      "destination": "/pages/baseball/leaders/:path*"
+    },
+    {
+      "source": "/baseball/f5",
+      "destination": "/pages/baseball/f5/index.html"
+    },
+    {
+      "source": "/baseball/f5/",
+      "destination": "/pages/baseball/f5/index.html"
+    },
+    {
+      "source": "/baseball/f5/:path*",
+      "destination": "/pages/baseball/f5/:path*"
+    },
+    {
+      "source": "/baseball/lab",
+      "destination": "/pages/baseball/lab/index.html"
+    },
+    {
+      "source": "/baseball/lab/",
+      "destination": "/pages/baseball/lab/index.html"
+    },
+    {
+      "source": "/baseball/lab/:path*",
+      "destination": "/pages/baseball/lab/:path*"
+    },
+    {
+      "source": "/baseball/parlay",
+      "destination": "/pages/baseball/parlay/index.html"
+    },
+    {
+      "source": "/baseball/parlay/",
+      "destination": "/pages/baseball/parlay/index.html"
+    },
+    {
+      "source": "/baseball/parlay/:path*",
+      "destination": "/pages/baseball/parlay/:path*"
+    },
+    {
       "source": "/baseball/",
       "destination": "/pages/baseball/index.html"
     },

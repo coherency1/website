@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F5 / YRFI — Diamond Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">coherency</a>
+    <div class="nav-links">
+      <a href="/baseball/matchups/" class="nav-link">matchups</a>
+      <a href="/baseball/" class="nav-link">baseball</a>
+    </div>
+  </nav>
+
+  <main class="f5-dash">
+
+    <header class="dash-topbar">
+      <div class="dash-title-block">
+        <span class="dash-title-text">DIAMOND_ENGINE</span>
+        <span class="dash-subtitle">F5 / YRFI</span>
+      </div>
+      <div class="dash-meta">
+        <span class="dash-date" id="dashDate"></span>
+      </div>
+      <div class="dash-status" id="dashStatus">LOADING</div>
+    </header>
+
+    <div class="view-toggle" role="group">
+      <button class="toggle-btn active" data-view="yrfi">YRFI / NRFI</button>
+      <button class="toggle-btn" data-view="f5">FIRST FIVE</button>
+    </div>
+
+    <section class="cards-grid" id="cardsGrid">
+      <!-- Cards rendered by JS -->
+    </section>
+
+    <div class="empty-state" id="emptyState" hidden>
+      <span class="empty-icon">//</span>
+      <span class="empty-text">NO DATA</span>
+      <span class="empty-sub">Run the daily pipeline to generate F5 and YRFI projections.</span>
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
