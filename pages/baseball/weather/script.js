@@ -10,7 +10,7 @@
 // dims: { lf, lcf, cf, rcf, rf } in feet
 // walls: { lf, lcf, cf, rcf, rf } in feet
 // alt: altitude in feet, roof: 'open'|'retractable'|'dome'
-// orientation: home plate facing direction in degrees (meteorological)
+// orientation: compass bearing from home plate toward CF (0°=N, 90°=E)
 // sens: weather sensitivity coefficient (1.0 = league average)
 // lat/lon: park coordinates for live weather
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,7 +21,7 @@ const PARKS = [
     city: 'Baltimore', name: 'Oriole Park at Camden Yards',
     dims: { lf: 333, lcf: 364, cf: 400, rcf: 373, rf: 318 },
     walls: { lf: 7, lcf: 7, cf: 7, rcf: 21, rf: 25 },
-    alt: 30, roof: 'open', orientation: 207, sens: 1.05,
+    alt: 30, roof: 'open', orientation: 31, sens: 1.05,
     lat: 39.2838, lon: -76.6216,
     note: 'Eutaw Street power alley (RF) benefits from Baltimore summers.'
   },
@@ -31,7 +31,7 @@ const PARKS = [
     city: 'Boston', name: 'Fenway Park',
     dims: { lf: 310, lcf: 379, cf: 390, rcf: 380, rf: 302 },
     walls: { lf: 37, lcf: 5, cf: 5, rcf: 5, rf: 3 },
-    alt: 20, roof: 'open', orientation: 202, sens: 1.93,
+    alt: 20, roof: 'open', orientation: 45, sens: 1.93,
     lat: 42.3467, lon: -71.0972,
     note: 'The Green Monster suppresses LF home runs but creates doubles. Wind from Kenmore is crucial.'
   },
@@ -41,7 +41,7 @@ const PARKS = [
     city: 'New York', name: 'Yankee Stadium',
     dims: { lf: 318, lcf: 399, cf: 408, rcf: 385, rf: 314 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 25, roof: 'open', orientation: 209, sens: 1.81,
+    alt: 25, roof: 'open', orientation: 75, sens: 1.81,
     lat: 40.8296, lon: -73.9262,
     note: 'Short RF porch (314 ft) is highly wind-susceptible. Jet stream winds from W-NW help pull balls out.'
   },
@@ -51,7 +51,7 @@ const PARKS = [
     city: 'Toronto', name: 'Rogers Centre',
     dims: { lf: 328, lcf: 375, cf: 400, rcf: 375, rf: 328 },
     walls: { lf: 10, lcf: 10, cf: 10, rcf: 10, rf: 10 },
-    alt: 260, roof: 'retractable', orientation: 210, sens: 0.20,
+    alt: 260, roof: 'retractable', orientation: 345, sens: 0.20,
     lat: 43.6414, lon: -79.3894,
     note: 'Retractable roof means near-zero weather impact most games. Turf field slightly increases ball speed.'
   },
@@ -61,7 +61,7 @@ const PARKS = [
     city: 'St. Petersburg', name: 'Tropicana Field',
     dims: { lf: 315, lcf: 370, cf: 404, rcf: 370, rf: 322 },
     walls: { lf: 9, lcf: 9, cf: 9, rcf: 9, rf: 9 },
-    alt: 45, roof: 'dome', orientation: 210, sens: 0.10,
+    alt: 45, roof: 'dome', orientation: 359, sens: 0.10,
     lat: 27.7682, lon: -82.6534,
     note: 'Fully enclosed dome. Weather has essentially no impact on play.'
   },
@@ -71,7 +71,7 @@ const PARKS = [
     city: 'Chicago', name: 'Guaranteed Rate Field',
     dims: { lf: 330, lcf: 375, cf: 400, rcf: 375, rf: 335 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 595, roof: 'open', orientation: 200, sens: 1.10,
+    alt: 595, roof: 'open', orientation: 127, sens: 1.10,
     lat: 41.8299, lon: -87.6338,
     note: 'South Side lake winds unpredictable. Elevation at 595 ft adds modest carry.'
   },
@@ -81,7 +81,7 @@ const PARKS = [
     city: 'Cleveland', name: 'Progressive Field',
     dims: { lf: 325, lcf: 370, cf: 405, rcf: 375, rf: 325 },
     walls: { lf: 9, lcf: 9, cf: 9, rcf: 9, rf: 9 },
-    alt: 660, roof: 'open', orientation: 194, sens: 0.90,
+    alt: 660, roof: 'open', orientation: 0, sens: 0.90,
     lat: 41.4962, lon: -81.6852,
     note: 'Lake Erie creates consistent carry from SW winds in summer.'
   },
@@ -91,7 +91,7 @@ const PARKS = [
     city: 'Detroit', name: 'Comerica Park',
     dims: { lf: 345, lcf: 370, cf: 420, rcf: 365, rf: 330 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 600, roof: 'open', orientation: 210, sens: 0.75,
+    alt: 600, roof: 'open', orientation: 150, sens: 0.75,
     lat: 42.3390, lon: -83.0485,
     note: 'Deep CF (420 ft) makes it pitcher-friendly regardless of conditions. LCF and RCF are also deep.'
   },
@@ -101,7 +101,7 @@ const PARKS = [
     city: 'Kansas City', name: 'Kauffman Stadium',
     dims: { lf: 330, lcf: 387, cf: 410, rcf: 387, rf: 330 },
     walls: { lf: 9, lcf: 9, cf: 9, rcf: 9, rf: 9 },
-    alt: 750, roof: 'open', orientation: 196, sens: 0.80,
+    alt: 750, roof: 'open', orientation: 46, sens: 0.80,
     lat: 39.0517, lon: -94.4803,
     note: 'Symmetrical park. Elevation 750 ft adds some carry. Spring crosswinds significant.'
   },
@@ -111,7 +111,7 @@ const PARKS = [
     city: 'Minneapolis', name: 'Target Field',
     dims: { lf: 339, lcf: 377, cf: 404, rcf: 367, rf: 328 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 815, roof: 'open', orientation: 209, sens: 0.95,
+    alt: 815, roof: 'open', orientation: 129, sens: 0.95,
     lat: 44.9818, lon: -93.2775,
     note: 'Open-air in Minnesota. Cold snaps in April/May and hot humid July+August both influence carry.'
   },
@@ -121,7 +121,7 @@ const PARKS = [
     city: 'Sacramento', name: 'Sutter Health Park',
     dims: { lf: 330, lcf: 375, cf: 403, rcf: 375, rf: 330 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 30, roof: 'open', orientation: 200, sens: 0.85,
+    alt: 30, roof: 'open', orientation: 49.3, sens: 0.85,
     lat: 38.5802, lon: -121.5067,
     note: 'Sacramento\'s summer heat (100°F+) provides some of the best carry conditions in MLB.'
   },
@@ -131,7 +131,7 @@ const PARKS = [
     city: 'Seattle', name: 'T-Mobile Park',
     dims: { lf: 331, lcf: 378, cf: 401, rcf: 381, rf: 326 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 20, roof: 'retractable', orientation: 198, sens: 0.45,
+    alt: 20, roof: 'retractable', orientation: 49, sens: 0.45,
     lat: 47.5914, lon: -122.3325,
     note: 'Retractable roof used in wet Seattle weather. When open, Puget Sound winds from W/NW.'
   },
@@ -141,7 +141,7 @@ const PARKS = [
     city: 'Arlington', name: 'Globe Life Field',
     dims: { lf: 329, lcf: 372, cf: 407, rcf: 374, rf: 326 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 551, roof: 'retractable', orientation: 198, sens: 0.10,
+    alt: 551, roof: 'retractable', orientation: 30, sens: 0.10,
     lat: 32.7473, lon: -97.0845,
     note: 'Kept closed for Texas summer heat. Near-zero weather impact in practice.'
   },
@@ -151,7 +151,7 @@ const PARKS = [
     city: 'Anaheim', name: 'Angel Stadium',
     dims: { lf: 330, lcf: 370, cf: 396, rcf: 370, rf: 330 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 160, roof: 'open', orientation: 204, sens: 0.72,
+    alt: 160, roof: 'open', orientation: 43.6, sens: 0.72,
     lat: 33.8003, lon: -117.8827,
     note: 'Inland Anaheim heat increases carry on summer days. Santa Ana winds in fall create crosswinds.'
   },
@@ -161,7 +161,7 @@ const PARKS = [
     city: 'Houston', name: 'Minute Maid Park',
     dims: { lf: 315, lcf: 362, cf: 409, rcf: 373, rf: 326 },
     walls: { lf: 9, lcf: 9, cf: 14, rcf: 10, rf: 6 },
-    alt: 40, roof: 'retractable', orientation: 198, sens: 0.25,
+    alt: 40, roof: 'retractable', orientation: 343, sens: 0.25,
     lat: 29.7573, lon: -95.3555,
     note: 'Houston humidity and heat mean roof stays closed frequently. RF Crawford Boxes at 326 ft are very short.'
   },
@@ -171,7 +171,7 @@ const PARKS = [
     city: 'Cumberland', name: 'Truist Park',
     dims: { lf: 335, lcf: 380, cf: 400, rcf: 375, rf: 325 },
     walls: { lf: 6, lcf: 6, cf: 8, rcf: 6, rf: 6 },
-    alt: 1050, roof: 'open', orientation: 200, sens: 0.85,
+    alt: 1050, roof: 'open', orientation: 145, sens: 0.85,
     lat: 33.8908, lon: -84.4678,
     note: 'Elevated suburban Atlanta park. Thin air at 1050 ft adds about 2 ft carry vs sea level.'
   },
@@ -181,7 +181,7 @@ const PARKS = [
     city: 'Miami', name: 'LoanDepot Park',
     dims: { lf: 344, lcf: 386, cf: 400, rcf: 387, rf: 335 },
     walls: { lf: 7, lcf: 7, cf: 7, rcf: 7, rf: 7 },
-    alt: 8, roof: 'retractable', orientation: 190, sens: 0.15,
+    alt: 8, roof: 'retractable', orientation: 128, sens: 0.15,
     lat: 25.7781, lon: -80.2196,
     note: 'Kept closed most of the season due to Miami heat and rain. Weather impact near zero.'
   },
@@ -191,7 +191,7 @@ const PARKS = [
     city: 'New York', name: 'Citi Field',
     dims: { lf: 335, lcf: 379, cf: 408, rcf: 383, rf: 330 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 15, roof: 'open', orientation: 212, sens: 1.05,
+    alt: 15, roof: 'open', orientation: 0, sens: 1.05,
     lat: 40.7571, lon: -73.8458,
     note: 'Flushing Meadows sea-level park. Flushing Bay winds from ESE create natural In-LF crosswinds.'
   },
@@ -201,7 +201,7 @@ const PARKS = [
     city: 'Philadelphia', name: 'Citizens Bank Park',
     dims: { lf: 329, lcf: 374, cf: 401, rcf: 369, rf: 330 },
     walls: { lf: 6, lcf: 6, cf: 6, rcf: 6, rf: 8 },
-    alt: 20, roof: 'open', orientation: 197, sens: 1.10,
+    alt: 20, roof: 'open', orientation: 9, sens: 1.10,
     lat: 39.9061, lon: -75.1665,
     note: 'Philadelphia summer heat and humidity boost carry. Known as a hitter\'s park in warm months.'
   },
@@ -211,7 +211,7 @@ const PARKS = [
     city: 'Washington', name: 'Nationals Park',
     dims: { lf: 336, lcf: 377, cf: 402, rcf: 370, rf: 335 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 25, roof: 'open', orientation: 200, sens: 0.95,
+    alt: 25, roof: 'open', orientation: 28, sens: 0.95,
     lat: 38.8730, lon: -77.0074,
     note: 'Near the Anacostia River. DC humidity in summer significant. SW winds common.'
   },
@@ -221,7 +221,7 @@ const PARKS = [
     city: 'Chicago', name: 'Wrigley Field',
     dims: { lf: 355, lcf: 368, cf: 400, rcf: 368, rf: 353 },
     walls: { lf: 11.5, lcf: 11.5, cf: 11.5, rcf: 11.5, rf: 11.5 },
-    alt: 600, roof: 'open', orientation: 216, sens: 3.05,
+    alt: 600, roof: 'open', orientation: 37, sens: 3.05,
     lat: 41.9484, lon: -87.6553,
     note: 'Highest wind sensitivity in MLB. Wrigley is completely exposed to Lake Michigan winds. Out-blowing = HR parade, In = pitcher\'s heaven.'
   },
@@ -231,7 +231,7 @@ const PARKS = [
     city: 'Cincinnati', name: 'Great American Ball Park',
     dims: { lf: 328, lcf: 379, cf: 404, rcf: 370, rf: 325 },
     walls: { lf: 8, lcf: 8, cf: 12, rcf: 8, rf: 8 },
-    alt: 490, roof: 'open', orientation: 197, sens: 1.25,
+    alt: 490, roof: 'open', orientation: 122, sens: 1.25,
     lat: 39.0974, lon: -84.5065,
     note: 'Ohio River bank creates unique thermal currents. Known hitter-friendly park in warm weather.'
   },
@@ -241,7 +241,7 @@ const PARKS = [
     city: 'Denver', name: 'Coors Field',
     dims: { lf: 347, lcf: 390, cf: 415, rcf: 375, rf: 350 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 5280, roof: 'open', orientation: 200, sens: 0.88,
+    alt: 5280, roof: 'open', orientation: 4, sens: 0.88,
     lat: 39.7561, lon: -104.9942,
     note: 'Mile High altitude is the dominant factor — air density is ~80% of sea level. Ball travels ~10% farther.'
   },
@@ -251,7 +251,7 @@ const PARKS = [
     city: 'Milwaukee', name: 'American Family Field',
     dims: { lf: 344, lcf: 371, cf: 400, rcf: 374, rf: 345 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 600, roof: 'retractable', orientation: 205, sens: 0.35,
+    alt: 600, roof: 'retractable', orientation: 129, sens: 0.35,
     lat: 43.0280, lon: -87.9712,
     note: 'Retractable roof means frequently closed in Milwaukee spring/fall cold. Low weather impact.'
   },
@@ -261,7 +261,7 @@ const PARKS = [
     city: 'Pittsburgh', name: 'PNC Park',
     dims: { lf: 325, lcf: 383, cf: 399, rcf: 375, rf: 320 },
     walls: { lf: 6, lcf: 6, cf: 6, rcf: 6, rf: 6 },
-    alt: 730, roof: 'open', orientation: 197, sens: 0.85,
+    alt: 730, roof: 'open', orientation: 116, sens: 0.85,
     lat: 40.4469, lon: -80.0058,
     note: 'Allegheny River location. Deep corners mask hitter-friendly air at 730 ft.'
   },
@@ -271,7 +271,7 @@ const PARKS = [
     city: 'St. Louis', name: 'Busch Stadium',
     dims: { lf: 336, lcf: 375, cf: 400, rcf: 375, rf: 335 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 465, roof: 'open', orientation: 196, sens: 0.80,
+    alt: 465, roof: 'open', orientation: 62, sens: 0.80,
     lat: 38.6226, lon: -90.1928,
     note: 'Gateway City humidity and heat in summer boost offense. NW winds common off the Arch.'
   },
@@ -281,7 +281,7 @@ const PARKS = [
     city: 'Phoenix', name: 'Chase Field',
     dims: { lf: 330, lcf: 374, cf: 407, rcf: 374, rf: 334 },
     walls: { lf: 7.5, lcf: 7.5, cf: 25, rcf: 7.5, rf: 7.5 },
-    alt: 1059, roof: 'retractable', orientation: 178, sens: 0.30,
+    alt: 1059, roof: 'retractable', orientation: 0, sens: 0.30,
     lat: 33.4455, lon: -112.0667,
     note: 'Phoenix extreme heat (115°F+ in summer) means roof is closed for air conditioning. Alt 1059 ft matters when open.'
   },
@@ -291,7 +291,7 @@ const PARKS = [
     city: 'Los Angeles', name: 'Dodger Stadium',
     dims: { lf: 330, lcf: 375, cf: 395, rcf: 375, rf: 330 },
     walls: { lf: 4, lcf: 4, cf: 4, rcf: 4, rf: 4 },
-    alt: 515, roof: 'open', orientation: 247, sens: 0.82,
+    alt: 515, roof: 'open', orientation: 26, sens: 0.82,
     lat: 34.0739, lon: -118.2400,
     note: 'Marine layer and evening fog suppress carry in night games. Low walls favor outfield play.'
   },
@@ -301,7 +301,7 @@ const PARKS = [
     city: 'San Diego', name: 'Petco Park',
     dims: { lf: 334, lcf: 382, cf: 396, rcf: 382, rf: 322 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 8 },
-    alt: 14, roof: 'open', orientation: 195, sens: 0.40,
+    alt: 14, roof: 'open', orientation: 0, sens: 0.40,
     lat: 32.7076, lon: -117.1570,
     note: 'San Diego marine layer is the most reliable in MLB — nearly every night game sees carry suppression.'
   },
@@ -311,7 +311,7 @@ const PARKS = [
     city: 'San Francisco', name: 'Oracle Park',
     dims: { lf: 339, lcf: 364, cf: 399, rcf: 365, rf: 309 },
     walls: { lf: 8, lcf: 8, cf: 8, rcf: 8, rf: 24 },
-    alt: 10, roof: 'open', orientation: 234, sens: 0.50,
+    alt: 10, roof: 'open', orientation: 85, sens: 0.50,
     lat: 37.7786, lon: -122.3893,
     note: 'McCovey Cove RF wall (24 ft) and SF Bay winds dramatically affect play. Prevailing winds from W/NW in afternoon.'
   }
@@ -729,216 +729,158 @@ function svgEl(tag, attrs) {
   return el;
 }
 
+// Compass bearing to world XY (home plate at origin, north=up, SVG y-down)
+function compassToXY(dist, compassDeg) {
+  const rad = compassDeg * Math.PI / 180;
+  return [dist * Math.sin(rad), -dist * Math.cos(rad)];
+}
+
+// Catmull-Rom spline interpolation
+function catmullRom(p0, p1, p2, p3, t) {
+  const t2 = t * t, t3 = t2 * t;
+  return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+}
+
 function buildFieldDiagram(park) {
   const svg = dom.fieldDiagram;
   svg.innerHTML = '';
-
   const W = 400, H = 320;
-  const homeX = W / 2, homeY = H - 30;
+  const o = park.orientation; // compass bearing from home plate toward CF
 
-  // Scale: CF distance maps to ~H*0.72 pixels up
-  const scale = (H * 0.72) / park.dims.cf;
-
-  function dimToXY(distance, angleDeg) {
-    const rad = (angleDeg - 90) * Math.PI / 180;
-    const px = homeX + distance * scale * Math.cos(rad);
-    const py = homeY + distance * scale * Math.sin(rad);
-    return [px, py];
+  // Interpolate smooth outfield wall via catmull-rom spline
+  // 5 known distances at angular offsets from CF: -45, -22.5, 0, +22.5, +45
+  const dists = [park.dims.lf, park.dims.lcf, park.dims.cf, park.dims.rcf, park.dims.rf];
+  const padded = [dists[0] * 2 - dists[1], ...dists, dists[4] * 2 - dists[3]];
+  const stepsPerSeg = 8;
+  const wallPts = [];
+  for (let seg = 0; seg < 4; seg++) {
+    for (let s = 0; s < stepsPerSeg; s++) {
+      const t = s / stepsPerSeg;
+      const dist = catmullRom(padded[seg], padded[seg + 1], padded[seg + 2], padded[seg + 3], t);
+      const offset = -45 + seg * 22.5 + 22.5 * t;
+      wallPts.push(compassToXY(dist, o + offset));
+    }
   }
+  wallPts.push(compassToXY(dists[4], o + 45));
 
-  // Field angles: LF=225°, LCF=247.5°, CF=270° (top), RCF=292.5°, RF=315°
-  // But we draw relative to home plate at bottom, outfield at top
-  // LF is to left (270° true), RF to right (90° true), CF straight up (0°)
-  // We use visual angles: CF=270°(up), LF=180°+45°=225°, RF=315°
-  const fieldAngles = {
-    lf: 225, lcf: 247.5, cf: 270, rcf: 292.5, rf: 315
-  };
+  // Foul line extensions
+  const lfExt = compassToXY(park.dims.lf * 1.15, o - 45);
+  const rfExt = compassToXY(park.dims.rf * 1.15, o + 45);
+
+  // Bounding box (wall + home plate + foul extensions)
+  const allX = wallPts.map(p => p[0]).concat([0, lfExt[0], rfExt[0]]);
+  const allY = wallPts.map(p => p[1]).concat([0, lfExt[1], rfExt[1]]);
+  const minX = Math.min(...allX), maxX = Math.max(...allX);
+  const minY = Math.min(...allY), maxY = Math.max(...allY);
+  const rangeX = maxX - minX || 1, rangeY = maxY - minY || 1;
+
+  const pad = 38;
+  const sc = Math.min((W - 2 * pad) / rangeX, (H - 2 * pad) / rangeY);
+  const cenX = W / 2 - ((minX + maxX) / 2) * sc;
+  const cenY = H / 2 - ((minY + maxY) / 2) * sc;
+
+  function toSvg(wx, wy) { return [cenX + wx * sc, cenY + wy * sc]; }
+  function compassToSvg(dist, deg) { return toSvg(...compassToXY(dist, deg)); }
+  const [homeX, homeY] = toSvg(0, 0);
 
   // Background
-  const bg = svgEl('rect', { x: 0, y: 0, width: W, height: H, fill: '#060e1e' });
-  svg.appendChild(bg);
+  svg.appendChild(svgEl('rect', { x: 0, y: 0, width: W, height: H, fill: '#060e1e' }));
 
-  // Grass base (full outfield area)
-  const grassPath = `M ${homeX} ${homeY} L ${dimToXY(park.dims.lf, fieldAngles.lf).join(',')} L ${dimToXY(park.dims.lcf, fieldAngles.lcf).join(',')} L ${dimToXY(park.dims.cf, fieldAngles.cf).join(',')} L ${dimToXY(park.dims.rcf, fieldAngles.rcf).join(',')} L ${dimToXY(park.dims.rf, fieldAngles.rf).join(',')} Z`;
-  const grass = svgEl('path', { d: grassPath, fill: '#0a1e0e', stroke: 'none' });
-  svg.appendChild(grass);
+  // Grass polygon
+  let grassD = `M ${homeX},${homeY}`;
+  wallPts.forEach(([wx, wy]) => { const [sx, sy] = toSvg(wx, wy); grassD += ` L ${sx},${sy}`; });
+  grassD += ' Z';
+  svg.appendChild(svgEl('path', { d: grassD, fill: '#0a1e0e' }));
 
-  // Infield dirt circle
-  const infieldR = 95 * scale;
-  const dirtCircle = svgEl('circle', { cx: homeX, cy: homeY, r: infieldR, fill: '#1a1208', stroke: 'none' });
-  svg.appendChild(dirtCircle);
-
-  // Inner grass diamond-ish
-  const innerGrass = svgEl('circle', { cx: homeX, cy: homeY, r: infieldR * 0.75, fill: '#0d2010', stroke: 'none' });
-  svg.appendChild(innerGrass);
+  // Infield
+  const infR = 95 * sc;
+  svg.appendChild(svgEl('circle', { cx: homeX, cy: homeY, r: infR, fill: '#1a1208' }));
+  svg.appendChild(svgEl('circle', { cx: homeX, cy: homeY, r: infR * 0.75, fill: '#0d2010' }));
 
   // Foul lines
-  const lfLine = svgEl('line', {
-    x1: homeX, y1: homeY,
-    x2: dimToXY(park.dims.lf * 1.1, fieldAngles.lf)[0],
-    y2: dimToXY(park.dims.lf * 1.1, fieldAngles.lf)[1],
-    stroke: '#ffffff', 'stroke-width': '1', 'stroke-opacity': '0.3'
-  });
-  const rfLine = svgEl('line', {
-    x1: homeX, y1: homeY,
-    x2: dimToXY(park.dims.rf * 1.1, fieldAngles.rf)[0],
-    y2: dimToXY(park.dims.rf * 1.1, fieldAngles.rf)[1],
-    stroke: '#ffffff', 'stroke-width': '1', 'stroke-opacity': '0.3'
-  });
-  svg.appendChild(lfLine);
-  svg.appendChild(rfLine);
+  const [lfx, lfy] = toSvg(...lfExt);
+  const [rfx, rfy] = toSvg(...rfExt);
+  svg.appendChild(svgEl('line', { x1: homeX, y1: homeY, x2: lfx, y2: lfy, stroke: '#ffffff', 'stroke-width': '1', 'stroke-opacity': '0.3' }));
+  svg.appendChild(svgEl('line', { x1: homeX, y1: homeY, x2: rfx, y2: rfy, stroke: '#ffffff', 'stroke-width': '1', 'stroke-opacity': '0.3' }));
 
-  // Outfield wall as a curved path
-  const wallPoints = [
-    dimToXY(park.dims.lf, fieldAngles.lf),
-    dimToXY(park.dims.lcf, fieldAngles.lcf),
-    dimToXY(park.dims.cf, fieldAngles.cf),
-    dimToXY(park.dims.rcf, fieldAngles.rcf),
-    dimToXY(park.dims.rf, fieldAngles.rf),
-  ];
+  // Outfield wall (smooth spline curve)
+  let wallD = '';
+  wallPts.forEach(([wx, wy], i) => { const [sx, sy] = toSvg(wx, wy); wallD += i === 0 ? `M ${sx},${sy}` : ` L ${sx},${sy}`; });
+  svg.appendChild(svgEl('path', { d: wallD, stroke: park.color, 'stroke-width': '8', fill: 'none', 'stroke-opacity': '0.2', 'stroke-linecap': 'round' }));
+  svg.appendChild(svgEl('path', { d: wallD, stroke: park.color, 'stroke-width': '3', fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
 
-  // Draw wall as cubic bezier segments
-  let wallPathD = `M ${wallPoints[0].join(',')}`;
-  for (let i = 0; i < wallPoints.length - 1; i++) {
-    const p0 = wallPoints[i];
-    const p1 = wallPoints[i + 1];
-    const mx = (p0[0] + p1[0]) / 2;
-    const my = (p0[1] + p1[1]) / 2;
-    wallPathD += ` Q ${mx},${my - 5} ${p1[0]},${p1[1]}`;
+  // Distance labels at 5 measurement points
+  [
+    { d: park.dims.lf, off: -45 }, { d: park.dims.lcf, off: -22.5 }, { d: park.dims.cf, off: 0 },
+    { d: park.dims.rcf, off: 22.5 }, { d: park.dims.rf, off: 45 }
+  ].forEach(({ d: dist, off }) => {
+    const [lx, ly] = compassToSvg(dist, o + off);
+    const [nx, ny] = compassToXY(1, o + off);
+    const lbl = svgEl('text', {
+      x: lx + nx * 14, y: ly + ny * 14,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: '#d0dae8', 'font-size': '10', 'font-family': 'DM Mono, monospace', 'font-weight': '500',
+    });
+    lbl.textContent = `${dist}'`;
+    svg.appendChild(lbl);
+    svg.appendChild(svgEl('circle', { cx: lx, cy: ly, r: '3', fill: park.color, 'fill-opacity': '0.8' }));
+  });
+
+  // CF wall height label
+  const [cfx, cfy] = compassToSvg(park.dims.cf, o);
+  const cfHL = svgEl('text', {
+    x: cfx + 18, y: cfy, 'text-anchor': 'start', 'dominant-baseline': 'middle',
+    fill: '#7a96b8', 'font-size': '8', 'font-family': 'DM Mono, monospace',
+  });
+  cfHL.textContent = `${park.walls.cf}ft wall`;
+  svg.appendChild(cfHL);
+
+  // Home plate (rotated to face CF direction)
+  const plateG = svgEl('g', { transform: `translate(${homeX},${homeY}) rotate(${o})` });
+  plateG.appendChild(svgEl('polygon', { points: '0,-7 -5,-3 -5,3 5,3 5,-3', fill: '#d0dae8' }));
+  svg.appendChild(plateG);
+
+  // North compass indicator (top-right corner)
+  const nX = W - 25, nY = 25;
+  svg.appendChild(svgEl('line', { x1: nX, y1: nY + 12, x2: nX, y2: nY - 8, stroke: '#7a96b8', 'stroke-width': '1.5', 'stroke-linecap': 'round' }));
+  svg.appendChild(svgEl('polygon', { points: `${nX},${nY - 12} ${nX - 4},${nY - 4} ${nX + 4},${nY - 4}`, fill: '#7a96b8' }));
+  const nLbl = svgEl('text', {
+    x: nX, y: nY - 18, 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+    fill: '#7a96b8', 'font-size': '10', 'font-family': 'DM Sans, system-ui, sans-serif', 'font-weight': '700',
+  });
+  nLbl.textContent = 'N';
+  svg.appendChild(nLbl);
+
+  // Wind arrow (compass-oriented: convert park-relative to compass bearing)
+  if (state.windSpeed >= 1) {
+    const compassWind = ((state.windDir + o) % 360 + 360) % 360;
+    const arrowLen = Math.min(40, 15 + state.windSpeed * 1.2);
+    const [ocx, ocy] = compassToSvg(park.dims.cf * 0.5, o);
+    const wRad = compassWind * Math.PI / 180;
+    const wdx = Math.sin(wRad), wdy = -Math.cos(wRad);
+    const ax = ocx - wdx * arrowLen * 0.5, ay = ocy - wdy * arrowLen * 0.5;
+    const ex = ocx + wdx * arrowLen * 0.5, ey = ocy + wdy * arrowLen * 0.5;
+    svg.appendChild(svgEl('line', { x1: ax, y1: ay, x2: ex, y2: ey, stroke: '#e8a832', 'stroke-width': '2.5', 'stroke-linecap': 'round', 'stroke-opacity': '0.9' }));
+    const pdx = -wdy, pdy = wdx;
+    svg.appendChild(svgEl('polygon', {
+      points: `${ex + wdx * 4},${ey + wdy * 4} ${ex - wdx * 4 + pdx * 5},${ey - wdy * 4 + pdy * 5} ${ex - wdx * 4 - pdx * 5},${ey - wdy * 4 - pdy * 5}`,
+      fill: '#e8a832', 'fill-opacity': '0.9',
+    }));
+    const sl = svgEl('text', {
+      x: ex + 12, y: ey, 'text-anchor': 'start', 'dominant-baseline': 'middle',
+      fill: '#e8a832', 'font-size': '9', 'font-family': 'DM Mono, monospace', 'font-weight': '500',
+    });
+    sl.textContent = `${state.windSpeed}mph`;
+    svg.appendChild(sl);
   }
 
-  const wallPath = svgEl('path', {
-    d: wallPathD,
-    stroke: park.color,
-    'stroke-width': '3',
-    fill: 'none',
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round',
+  // Wind info label
+  const windLbl = svgEl('text', {
+    x: W - 8, y: H - 8, 'text-anchor': 'end',
+    fill: '#3d5a7a', 'font-size': '9', 'font-family': 'DM Sans, system-ui, sans-serif', 'font-weight': '700', 'letter-spacing': '0.1em',
   });
-  svg.appendChild(wallPath);
-
-  // Wall glow
-  const wallGlow = svgEl('path', {
-    d: wallPathD,
-    stroke: park.color,
-    'stroke-width': '8',
-    fill: 'none',
-    'stroke-opacity': '0.2',
-    'stroke-linecap': 'round',
-  });
-  svg.insertBefore(wallGlow, wallPath);
-
-  // Distance labels
-  const labelConfigs = [
-    { dist: park.dims.lf,  angle: fieldAngles.lf,  label: `${park.dims.lf}'` },
-    { dist: park.dims.lcf, angle: fieldAngles.lcf, label: `${park.dims.lcf}'` },
-    { dist: park.dims.cf,  angle: fieldAngles.cf,  label: `${park.dims.cf}'` },
-    { dist: park.dims.rcf, angle: fieldAngles.rcf, label: `${park.dims.rcf}'` },
-    { dist: park.dims.rf,  angle: fieldAngles.rf,  label: `${park.dims.rf}'` },
-  ];
-
-  labelConfigs.forEach(({ dist, angle, label }) => {
-    const [lx, ly] = dimToXY(dist, angle);
-    const labelEl = svgEl('text', {
-      x: lx, y: ly - 10,
-      'text-anchor': 'middle',
-      'dominant-baseline': 'middle',
-      fill: '#d0dae8',
-      'font-size': '10',
-      'font-family': 'DM Mono, monospace',
-      'font-weight': '500',
-    });
-    labelEl.textContent = label;
-    svg.appendChild(labelEl);
-
-    // Distance dot
-    const dot = svgEl('circle', { cx: lx, cy: ly, r: '3', fill: park.color, 'fill-opacity': '0.8' });
-    svg.appendChild(dot);
-  });
-
-  // Wall height labels (at CF only to keep it clean)
-  const cfPos = dimToXY(park.dims.cf, fieldAngles.cf);
-  const cfHLabel = svgEl('text', {
-    x: cfPos[0] + 18, y: cfPos[1],
-    'text-anchor': 'start',
-    'dominant-baseline': 'middle',
-    fill: '#7a96b8',
-    'font-size': '8',
-    'font-family': 'DM Mono, monospace',
-  });
-  cfHLabel.textContent = `${park.walls.cf}ft wall`;
-  svg.appendChild(cfHLabel);
-
-  // Home plate
-  const plate = svgEl('polygon', {
-    points: `${homeX},${homeY - 7} ${homeX - 5},${homeY - 3} ${homeX - 5},${homeY + 3} ${homeX + 5},${homeY + 3} ${homeX + 5},${homeY - 3}`,
-    fill: '#d0dae8',
-  });
-  svg.appendChild(plate);
-
-  // Wind arrow
-  drawWindArrow(svg, state.windDir, homeX, homeY, scale, park);
-
-  // "WIND" label at top
-  const windLabelEl = svgEl('text', {
-    x: W - 8, y: 16,
-    'text-anchor': 'end',
-    fill: '#3d5a7a',
-    'font-size': '9',
-    'font-family': 'DM Sans, system-ui, sans-serif',
-    'font-weight': '700',
-    'letter-spacing': '0.1em',
-  });
-  windLabelEl.textContent = `${Math.round(state.windDir)}° ${dirLabel(state.windDir).toUpperCase()}`;
-  svg.appendChild(windLabelEl);
-}
-
-function drawWindArrow(svg, angleDeg, cx, cy, scale, park) {
-  if (state.windSpeed < 1) return;
-
-  const arrowLen = Math.min(40, 15 + state.windSpeed * 1.2);
-  // Wind blows FROM a direction — visually show as arrow pointing in wind direction
-  const rad = (angleDeg - 90) * Math.PI / 180;
-
-  // Place arrow in the CF area
-  const startDist = park.dims.cf * 0.45;
-  const ax = cx + startDist * scale * Math.cos(rad - Math.PI);
-  const ay = cy + startDist * scale * Math.sin(rad - Math.PI);
-
-  const endX = ax + arrowLen * Math.cos(rad);
-  const endY = ay + arrowLen * Math.sin(rad);
-
-  const arrowLine = svgEl('line', {
-    x1: ax, y1: ay, x2: endX, y2: endY,
-    stroke: '#e8a832', 'stroke-width': '2.5', 'stroke-linecap': 'round',
-    'stroke-opacity': '0.9',
-  });
-  svg.appendChild(arrowLine);
-
-  // Arrowhead
-  const perpRad = rad + Math.PI / 2;
-  const tipPoints = [
-    `${endX},${endY}`,
-    `${endX - 8 * Math.cos(rad) + 5 * Math.cos(perpRad)},${endY - 8 * Math.sin(rad) + 5 * Math.sin(perpRad)}`,
-    `${endX - 8 * Math.cos(rad) - 5 * Math.cos(perpRad)},${endY - 8 * Math.sin(rad) - 5 * Math.sin(perpRad)}`,
-  ].join(' ');
-  const head = svgEl('polygon', { points: tipPoints, fill: '#e8a832', 'fill-opacity': '0.9' });
-  svg.appendChild(head);
-
-  // Speed label
-  const midX = (ax + endX) / 2;
-  const midY = (ay + endY) / 2;
-  const speedLabel = svgEl('text', {
-    x: midX + 10, y: midY,
-    'text-anchor': 'start',
-    'dominant-baseline': 'middle',
-    fill: '#e8a832',
-    'font-size': '9',
-    'font-family': 'DM Mono, monospace',
-    'font-weight': '500',
-  });
-  speedLabel.textContent = `${state.windSpeed}mph`;
-  svg.appendChild(speedLabel);
+  windLbl.textContent = `${Math.round(state.windDir)}° ${dirLabel(state.windDir).toUpperCase()}`;
+  svg.appendChild(windLbl);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1016,9 +958,10 @@ function buildTrajectory(carryFt) {
   });
   svg.appendChild(wall);
 
-  // Carry distance label
+  // Carry distance label — on top of wall bar
+  const wallTopY = H - padding.b - wallH;
   const carryLabel = svgEl('text', {
-    x: wallX, y: H - padding.b + 14,
+    x: wallX, y: wallTopY - 4,
     'text-anchor': 'middle',
     fill: PARK_BY_ID[state.parkId].color,
     'font-size': '8',
@@ -1052,7 +995,8 @@ function buildTrajectory(carryFt) {
   });
   svg.appendChild(currEl);
 
-  // Distance axis ticks
+  // Distance axis ticks — skip labels that overlap with carry label
+  const roundedCarry = Math.round(carryFt);
   [100, 200, 300, 400].forEach(dist => {
     const tx = toSvgX(dist);
     if (tx > padding.l && tx < W - padding.r) {
@@ -1062,15 +1006,18 @@ function buildTrajectory(carryFt) {
         stroke: '#1a3562', 'stroke-width': '1',
       });
       svg.appendChild(tick);
-      const tLabel = svgEl('text', {
-        x: tx, y: H - padding.b + 13,
-        'text-anchor': 'middle',
-        fill: '#3d5a7a',
-        'font-size': '7',
-        'font-family': 'DM Mono, monospace',
-      });
-      tLabel.textContent = `${dist}`;
-      svg.appendChild(tLabel);
+      // Skip label if too close to carry distance to prevent overlap
+      if (Math.abs(dist - roundedCarry) > 25) {
+        const tLabel = svgEl('text', {
+          x: tx, y: H - padding.b + 13,
+          'text-anchor': 'middle',
+          fill: '#3d5a7a',
+          'font-size': '7',
+          'font-family': 'DM Mono, monospace',
+        });
+        tLabel.textContent = `${dist}`;
+        svg.appendChild(tLabel);
+      }
     }
   });
 }
