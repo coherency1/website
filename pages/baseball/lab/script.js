@@ -195,6 +195,15 @@ async function runMatchup() {
       return;
     }
 
+    if (data.status === 'not_found') {
+      $status.textContent = 'NOT IN LINEUP';
+      $status.className = 'dash-status error';
+      $resultsPanel.hidden = true;
+      $resultHeader.innerHTML = `<div class="result-sub">This matchup is not in today's lineup data. Only today's scheduled batters vs opposing starters are available on prod.</div>`;
+      $resultsPanel.hidden = false;
+      return;
+    }
+
     if (data.status !== 'ok') {
       throw new Error(data.message || 'Unknown error');
     }

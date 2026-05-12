@@ -173,11 +173,40 @@ export default function handler(req, res) {
     return res.json({ status: 'no_data', message: 'Park factors not available in static mode.' });
   }
 
-  // POST /matchup-machine — not available in static mode
+  // POST /matchup-machine — serve from pre-computed matchup matrix
   if (route === 'matchup-machine') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'POST required' });
+    }
+
+    const { batter_id, pitcher_id } = req.body || {};
+    if (!batter_id || !pitcher_id) {
+      return res.status(400).json({ error: 'batter_id and pitcher_id required' });
+    }
+
+    const key = `${batter_id}_${pitcher_id}`;
+    for (const g of (data.games || [])) {
+      const matrix = g.matchup_matrix || {};
+      if (key in matrix) {
+        const m = matrix[key];
+        return res.json({
+          batter_id: m.batter_id,
+          pitcher_id: m.pitcher_id,
+          bat_side: m.bat_side,
+          pitch_hand: m.pitch_hand,
+          outcome_probs: m.outcome_probs,
+          rating: m.rating,
+          status: 'ok',
+          source: 'pre-computed',
+        });
+      }
+    }
+
     return res.json({
-      status: 'model_not_loaded',
-      message: 'Live matchup inference requires the Diamond Engine API server. Use localhost:8000 for live queries.',
+      batter_id,
+      pitcher_id,
+      status: 'not_found',
+      message: 'Matchup not in today\'s lineup matrix. Use localhost:8000 for arbitrary queries.',
     });
   }
 
