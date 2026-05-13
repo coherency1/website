@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Export Center — Diamond Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">coherency</a>
+    <div class="nav-links">
+      <a href="/baseball/matchups/" class="nav-link">matchups</a>
+      <a href="/baseball/" class="nav-link">baseball</a>
+    </div>
+  </nav>
+
+  <main class="export-dash">
+
+    <header class="dash-topbar">
+      <div class="dash-title-block">
+        <span class="dash-title-text">DIAMOND_ENGINE</span>
+        <span class="dash-subtitle">EXPORT CENTER</span>
+      </div>
+      <div class="dash-meta">
+        <span class="dash-date" id="dashDate"></span>
+      </div>
+      <div class="dash-status" id="dashStatus">LOADING</div>
+    </header>
+
+    <section class="export-grid" id="exportGrid">
+
+      <article class="export-card" id="cardPlayers">
+        <div class="card-type">Player Projections</div>
+        <div class="card-desc">Per-player sim means across all games</div>
+        <div class="card-format">CSV</div>
+        <div class="card-count" id="countPlayers">-- players</div>
+        <button class="dl-btn" id="btnPlayers" disabled>DOWNLOAD CSV</button>
+      </article>
+
+      <article class="export-card" id="cardGames">
+        <div class="card-type">Game Lines</div>
+        <div class="card-desc">Win probabilities, moneylines, totals</div>
+        <div class="card-format">CSV</div>
+        <div class="card-count" id="countGames">-- games</div>
+        <button class="dl-btn" id="btnGames" disabled>DOWNLOAD CSV</button>
+      </article>
+
+      <article class="export-card" id="cardFull">
+        <div class="card-type">Full Sim Data</div>
+        <div class="card-desc">Complete raw simulation output</div>
+        <div class="card-format">JSON</div>
+        <div class="card-count" id="countFull">-- games</div>
+        <button class="dl-btn" id="btnFull" disabled>DOWNLOAD JSON</button>
+      </article>
+
+      <article class="export-card" id="cardMatchups">
+        <div class="card-type">Matchup Matrix</div>
+        <div class="card-desc">Batter vs pitcher probability scores</div>
+        <div class="card-format">CSV</div>
+        <div class="card-count" id="countMatchups">-- matchups</div>
+        <button class="dl-btn" id="btnMatchups" disabled>DOWNLOAD CSV</button>
+      </article>
+
+    </section>
+
+    <div class="empty-state" id="emptyState" hidden>
+      <span class="empty-icon">//</span>
+      <span class="empty-text">NO SIMULATION DATA</span>
+      <span class="empty-sub">Run the daily pipeline to generate sim results.</span>
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

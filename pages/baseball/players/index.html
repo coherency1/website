@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player Lookup — Diamond Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo">coherency</a>
+    <div class="nav-links">
+      <a href="/baseball/matchups/" class="nav-link">matchups</a>
+      <a href="/baseball/" class="nav-link">baseball</a>
+    </div>
+  </nav>
+
+  <main class="players-dash">
+
+    <header class="dash-topbar">
+      <div class="dash-title-block">
+        <span class="dash-title-text">DIAMOND_ENGINE</span>
+        <span class="dash-subtitle">PLAYER LOOKUP</span>
+      </div>
+      <div class="dash-meta">
+        <span class="dash-date" id="dashDate"></span>
+      </div>
+      <div class="dash-status" id="dashStatus">LOADING</div>
+    </header>
+
+    <!-- ── Search ── -->
+    <section class="search-section">
+      <div class="search-wrap">
+        <input
+          type="text"
+          id="searchInput"
+          class="search-input"
+          placeholder="Search player name..."
+          autocomplete="off"
+        >
+        <div class="suggestion-list" id="suggestionList"></div>
+      </div>
+    </section>
+
+    <!-- ── Player Card ── -->
+    <section class="player-card" id="playerCard" hidden>
+
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="player-name" id="playerName"></span>
+          <div class="card-meta-row">
+            <span class="team-badge" id="teamBadge"></span>
+            <span class="matchup-label" id="matchupLabel"></span>
+            <span class="bat-side" id="batSide"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Projection Grid -->
+      <div class="section-label">PROJECTIONS</div>
+      <div class="proj-grid" id="projGrid"></div>
+
+      <!-- Props Section -->
+      <div class="props-section" id="propsSection" hidden>
+        <div class="section-label">PROP LINES</div>
+        <div class="props-list" id="propsList"></div>
+      </div>
+
+    </section>
+
+    <!-- ── Empty State ── -->
+    <div class="empty-state" id="emptyState">
+      <span class="empty-icon">//</span>
+      <span class="empty-text">PLAYER LOOKUP</span>
+      <span class="empty-sub">Search for a player to view their projections</span>
+    </div>
+
+    <!-- ── No Data ── -->
+    <div class="empty-state" id="noDataState" hidden>
+      <span class="empty-icon">//</span>
+      <span class="empty-text">NO SIM DATA</span>
+      <span class="empty-sub">Diamond Engine pipeline has not run for today.</span>
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

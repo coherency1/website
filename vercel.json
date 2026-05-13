@@ -142,6 +142,42 @@
       "destination": "/pages/baseball/parlay/:path*"
     },
     {
+      "source": "/baseball/strikeouts",
+      "destination": "/pages/baseball/strikeouts/index.html"
+    },
+    {
+      "source": "/baseball/strikeouts/",
+      "destination": "/pages/baseball/strikeouts/index.html"
+    },
+    {
+      "source": "/baseball/strikeouts/:path*",
+      "destination": "/pages/baseball/strikeouts/:path*"
+    },
+    {
+      "source": "/baseball/players",
+      "destination": "/pages/baseball/players/index.html"
+    },
+    {
+      "source": "/baseball/players/",
+      "destination": "/pages/baseball/players/index.html"
+    },
+    {
+      "source": "/baseball/players/:path*",
+      "destination": "/pages/baseball/players/:path*"
+    },
+    {
+      "source": "/baseball/export",
+      "destination": "/pages/baseball/export/index.html"
+    },
+    {
+      "source": "/baseball/export/",
+      "destination": "/pages/baseball/export/index.html"
+    },
+    {
+      "source": "/baseball/export/:path*",
+      "destination": "/pages/baseball/export/:path*"
+    },
+    {
       "source": "/baseball/",
       "destination": "/pages/baseball/index.html"
     },

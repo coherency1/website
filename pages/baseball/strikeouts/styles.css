@@ -1,0 +1,321 @@
+/* === COHERENCY — Diamond Engine Strikeout Center
+   K leaders + K matchups, terminal aesthetic, Space Mono
+   ===================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:           #080a0c;
+  --surface:      #0d1117;
+  --surface-2:    #111820;
+  --border:       #1a2535;
+  --border-lt:    #243040;
+
+  --accent:       #adff2f;
+  --accent-dim:   rgba(173, 255, 47, 0.15);
+  --blue:         #4a9eff;
+  --blue-dim:     rgba(74, 158, 255, 0.15);
+  --red:          #ff4a4a;
+  --red-dim:      rgba(255, 74, 74, 0.18);
+  --amber:        #f5a020;
+
+  --text-bright:  #ffffff;
+  --text-primary: #c8d4e0;
+  --text-muted:   #4a6080;
+  --text-dim:     #2a3a50;
+
+  --font-mono: 'Space Mono', monospace;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-6: 24px; --sp-8: 32px;
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SCANLINES ── */
+
+.scanlines {
+  position: fixed; inset: 0; z-index: 1000; pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0, 0, 0, 0.04) 2px, rgba(0, 0, 0, 0.04) 4px
+  );
+  opacity: 0.04;
+}
+
+/* ── NAV ── */
+
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sp-3) var(--sp-6);
+  background: rgba(8, 10, 12, 0.9);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo {
+  font-size: 14px; font-weight: 700;
+  color: var(--accent); text-decoration: none;
+  letter-spacing: 1px; text-transform: lowercase;
+}
+
+.nav-links { display: flex; gap: var(--sp-4); }
+
+.nav-link {
+  font-size: 12px; color: var(--text-muted);
+  text-decoration: none; letter-spacing: 1px;
+}
+.nav-link:hover { color: var(--text-primary); }
+
+/* ── DASHBOARD SHELL ── */
+
+.k-dash {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 72px var(--sp-6) var(--sp-8);
+}
+
+/* ── TOPBAR ── */
+
+.dash-topbar {
+  display: flex; align-items: baseline;
+  gap: var(--sp-6); margin-bottom: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.dash-title-text {
+  font-size: 18px; font-weight: 700;
+  color: var(--accent); letter-spacing: 2px;
+}
+
+.dash-subtitle {
+  font-size: 11px; color: var(--text-muted);
+  letter-spacing: 1px; margin-left: var(--sp-2);
+}
+
+.dash-meta {
+  display: flex; gap: var(--sp-4);
+  margin-left: auto;
+}
+
+.dash-date {
+  font-size: 11px; color: var(--text-muted); letter-spacing: 1px;
+}
+
+.dash-count {
+  font-size: 11px; color: var(--text-dim); letter-spacing: 1px;
+}
+
+.dash-status {
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--text-dim); padding: 2px 8px;
+  border: 1px solid var(--border);
+}
+.dash-status.live  { color: var(--accent); border-color: var(--accent); }
+.dash-status.error { color: var(--red);    border-color: var(--red);    }
+
+/* ── VIEW TOGGLE ── */
+
+.view-toggle {
+  display: flex; gap: var(--sp-2);
+  margin-bottom: var(--sp-6);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.toggle-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 2px;
+  padding: var(--sp-2) var(--sp-4);
+  cursor: pointer;
+  transition: color 0.15s ease-out, border-color 0.15s ease-out;
+}
+.toggle-btn:hover { color: var(--text-primary); border-color: var(--border-lt); }
+.toggle-btn.active { color: var(--accent); border-color: var(--accent); }
+
+/* ── K LIST CONTAINER ── */
+
+.k-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── COLUMN HEADER ROW ── */
+
+.k-header-row {
+  display: grid;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-1);
+}
+
+/* Leaders: name/game | K% | Proj K | PA | bar */
+.k-header-row.leaders {
+  grid-template-columns: 1fr 64px 64px 48px 80px;
+}
+
+/* Matchups: batter vs pitcher | K% | BB% | HR% | VS | bar */
+.k-header-row.matchups {
+  grid-template-columns: 1fr 64px 56px 56px 52px 80px;
+}
+
+/* ── LEADER ROW ── */
+
+.leader-row {
+  display: grid;
+  grid-template-columns: 1fr 64px 64px 48px 80px;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: border-color 0.12s ease-out;
+}
+.leader-row:hover { border-color: var(--border-lt); }
+
+.leader-rank {
+  font-size: 10px; color: var(--text-dim);
+  letter-spacing: 1px; margin-right: var(--sp-2);
+  min-width: 24px; display: inline-block;
+}
+
+.leader-name {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-bright); letter-spacing: 0.5px;
+}
+
+.leader-game {
+  font-size: 10px; color: var(--text-muted);
+  letter-spacing: 1px; margin-top: 1px;
+}
+
+.leader-team-badge {
+  font-size: 10px; color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.stat-cell {
+  font-size: 13px; font-weight: 700;
+  text-align: right; letter-spacing: 0.5px;
+}
+
+.stat-cell.k-pct-high { color: var(--red); }
+.stat-cell.k-pct-normal { color: var(--text-primary); }
+.stat-cell.proj-k { color: var(--text-primary); }
+.stat-cell.pa-val { color: var(--text-muted); font-size: 11px; }
+
+/* ── K BAR ── */
+
+.k-bar-wrap {
+  width: 80px; height: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.k-bar-fill {
+  height: 100%;
+  background: var(--red);
+  border-radius: 2px;
+  transition: width 0.3s ease-out;
+}
+
+/* ── MATCHUP ROW ── */
+
+.matchup-row {
+  display: grid;
+  grid-template-columns: 1fr 64px 56px 56px 52px 80px;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: border-color 0.12s ease-out;
+}
+.matchup-row:hover { border-color: var(--border-lt); }
+
+.matchup-players {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0;
+}
+
+.matchup-batter {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-bright); letter-spacing: 0.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.matchup-vs {
+  font-size: 9px; color: var(--text-dim); letter-spacing: 1px;
+}
+
+.matchup-pitcher {
+  font-size: 11px; color: var(--text-muted);
+  letter-spacing: 0.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.vs-score {
+  font-size: 11px; color: var(--amber);
+  text-align: right; letter-spacing: 0.5px;
+}
+
+/* ── EMPTY STATE ── */
+
+.empty-state {
+  display: flex; flex-direction: column;
+  align-items: center; gap: var(--sp-2);
+  padding: 80px var(--sp-6);
+}
+
+.empty-icon { font-size: 32px; color: var(--text-dim); font-weight: 700; }
+.empty-text { font-size: 13px; color: var(--text-muted); letter-spacing: 2px; }
+.empty-sub  { font-size: 11px; color: var(--text-dim); text-align: center; }
+
+/* ── RESPONSIVE ── */
+
+@media (max-width: 640px) {
+  .k-dash { padding: 64px var(--sp-3) var(--sp-6); }
+  .dash-title-text { font-size: 14px; }
+
+  /* Leaders: collapse PA + bar on mobile */
+  .k-header-row.leaders,
+  .leader-row {
+    grid-template-columns: 1fr 56px 56px;
+  }
+  .k-header-row.leaders .col-pa,
+  .leader-row .stat-cell.pa-val,
+  .k-header-row.leaders .col-bar,
+  .leader-row .k-bar-wrap { display: none; }
+
+  /* Matchups: collapse HR + VS + bar on mobile */
+  .k-header-row.matchups,
+  .matchup-row {
+    grid-template-columns: 1fr 56px 48px;
+  }
+  .k-header-row.matchups .col-hr,
+  .matchup-row .stat-cell.hr-pct,
+  .k-header-row.matchups .col-vs,
+  .matchup-row .vs-score,
+  .k-header-row.matchups .col-bar,
+  .matchup-row .k-bar-wrap { display: none; }
+}

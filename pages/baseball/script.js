@@ -75,6 +75,9 @@ const HUB_ITEMS = {
         { num: '42', name: 'LEADERBOARD',  pos: 'LDR', url: '/baseball/leaders/',  status: 'LIVE',    stack: 'DIAMOND',    type: 'DASH', desc: 'Customizable sim leaderboard. Sort by projected HR, hits, K, or any stat. Position filter, min PA threshold.' },
         { num: '56', name: 'PARLAY',       pos: 'PLY', url: '/baseball/parlay/',   status: 'LIVE',    stack: 'DIAMOND',    type: 'TOOL', desc: 'Correlated parlay fair pricing from sim co-occurrence. Compare true joint probability vs naive multiplication.' },
         { num: '74', name: 'MATCHUP LAB',  pos: 'LAB', url: '/baseball/lab/',      status: 'LIVE',    stack: 'DIAMOND',    type: 'TOOL', desc: 'Hypothetical batter-vs-pitcher matchup machine. Pick any player combo at any park and see projected outcomes.' },
+        { num: '81', name: 'STRIKEOUTS',   pos: 'K%',  url: '/baseball/strikeouts/', status: 'LIVE',  stack: 'DIAMOND',    type: 'DASH', desc: 'Strikeout Center. K% leaders and highest-K batter-pitcher matchups from today\'s sim data.' },
+        { num: '88', name: 'PLAYERS',      pos: 'PLR', url: '/baseball/players/',    status: 'LIVE',  stack: 'DIAMOND',    type: 'TOOL', desc: 'Player Lookup. Search any player for full projection card — PA, hits, HR, K, props, and more.' },
+        { num: '91', name: 'EXPORT',       pos: 'EXP', url: '/baseball/export/',     status: 'LIVE',  stack: 'DIAMOND',    type: 'TOOL', desc: 'Export Center. Download sim data as CSV or JSON — player projections, game lines, matchup matrix.' },
     ]
 };
 
