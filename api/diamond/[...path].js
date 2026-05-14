@@ -32,8 +32,10 @@ export default function handler(req, res) {
     return res.status(200).end();
   }
 
-  const pathSegments = req.query.path || [];
-  const route = pathSegments.join('/');
+  // Parse route from URL — more reliable than req.query.path which
+  // can be empty after ESM→CJS compilation on some Vercel runtimes.
+  const urlPath = (req.url || '').split('?')[0];
+  const route = urlPath.replace(/^\/api\/diamond\/?/, '');
 
   const data = loadSimData();
   if (!data) {
