@@ -166,12 +166,12 @@ body {
 /* Lineup rows */
 .lineup-row {
     display: grid;
-    grid-template-columns: 28px 1fr 32px;
+    grid-template-columns: 24px 1fr 28px;
     align-items: center;
-    padding: 0 var(--sp-3);
+    padding: 0 var(--sp-2);
     cursor: pointer;
     border-left: 3px solid transparent;
-    font-size: 7px;
+    font-size: 8px;
     color: var(--text-primary);
     text-decoration: none;
     transition: background 120ms, border-color 120ms, transform 80ms;
@@ -192,9 +192,9 @@ body {
 .lineup-row.placeholder:hover { background: transparent; }
 .lineup-row.placeholder:active { transform: none; }
 
-.lineup-num { color: var(--text-muted); font-size: 7px; }
-.lineup-name { color: var(--text-primary); font-size: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lineup-pos { color: var(--text-secondary); font-size: 6px; text-align: right; }
+.lineup-num { color: var(--text-muted); font-size: 8px; }
+.lineup-name { color: var(--text-primary); font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lineup-pos { color: var(--text-secondary); font-size: 7px; text-align: right; }
 
 /* ===================== CENTER SCREEN ===================== */
 .center-screen {
