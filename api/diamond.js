@@ -7,6 +7,8 @@ import { join } from 'path';
  * Serves pre-computed sim data from data/diamond/latest.json.
  * Mirrors the FastAPI endpoint structure so frontend code uses
  * the same paths in dev (localhost:8000) and prod (/api/diamond).
+ *
+ * Vercel rewrites route /api/diamond/:path* here with ?_path=:path
  */
 
 function loadSimData() {
@@ -32,10 +34,8 @@ export default function handler(req, res) {
     return res.status(200).end();
   }
 
-  // Parse route from URL — more reliable than req.query.path which
-  // can be empty after ESM→CJS compilation on some Vercel runtimes.
-  const urlPath = (req.url || '').split('?')[0];
-  const route = urlPath.replace(/^\/api\/diamond\/?/, '');
+  // Route comes from Vercel rewrite query param, or direct URL parsing.
+  const route = req.query._path || '';
 
   const data = loadSimData();
   if (!data) {

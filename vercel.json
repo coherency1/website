@@ -10,6 +10,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/diamond/:path(.*)",
+      "destination": "/api/diamond?_path=:path"
+    },
+    {
       "source": "/writing",
       "destination": "/pages/writing/index.html"
     },
